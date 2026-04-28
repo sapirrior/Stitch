@@ -1,0 +1,1735 @@
+ROOT_NAME libstitch
+CREATED_UTC 2026-04-28T14:30:55Z
+TOTAL_SOURCE_MB 0.05
+FILE_COUNT 30
+
+START_STRUCTURE
+libstitch/
+|-- .gemini/
+|   \-- task
+|-- data/
+|   |-- research_audit.md
+|   |-- research_math.md
+|   |-- research_structure.md
+|   \-- research_terminal_engines.md
+|-- src/
+|   |-- core/
+|   |   |-- diff.js
+|   |   \-- engine.js
+|   |-- driver/
+|   |   |-- ansi.js
+|   |   |-- constants.js
+|   |   |-- cursor.js
+|   |   |-- sgr.js
+|   |   \-- stdout.js
+|   |-- kernel/
+|   |   |-- arena.js
+|   |   |-- hooks.js
+|   |   \-- reconciler.js
+|   |-- layout/
+|   |   |-- compute.js
+|   |   |-- constraints.js
+|   |   \-- ilp.js
+|   \-- vram/
+|       |-- bitmask.js
+|       |-- buffer.js
+|       \-- composer.js
+|-- tests/
+|   |-- core.test.js
+|   |-- driver.test.js
+|   |-- kernel.test.js
+|   |-- layout.test.js
+|   |-- stress.test.js
+|   \-- vram.test.js
+|-- CONTRIBUTING.md
+|-- package.json
+\-- README.md
+END_STRUCTURE
+
+FILE_START .gemini/task 9e05f6ed1f21
+# System Directive: libstitch Arena Reconciler
+
+You are an autonomous AI Agent acting as the Senior Systems Architect for "libstitch". The engine core has been successfully micro-modularized. Your objective is to implement "Stitch-Arena"—a memory-safe, zero-allocation state reconciler utilizing a C-style Arena Allocator pattern optimized for V8.
+
+## 1. Core Architecture (The Stitch-Arena)
+Create the `src/kernel/` directory and implement the following explicit memory management system:
+- **`src/kernel/arena.js`:** Implement the memory arena. 
+  - Use parallel arrays: an `Int32Array` for topology/integers/dirty-bits/epochs, and a standard `Array` for string/object references.
+  - **Dynamic Resizing:** Start with a capacity of 1024 slots. Implement a `grow()` function that doubles capacity via `TypedArray.prototype.set()` when the arena reaches 90% utilization.
+  - **Memory Safety:** Implement a `free(pointer)` function that explicitly executes `refs[pointer] = null` on unmount to prevent zombie memory leaks.
+
+## 2. Component Identity & Thread Safety
+- **`src/kernel/reconciler.js`:** Implement the core work-loop and Fiber slot claiming.
+  - **Stable Hashing:** Calculate component IDs using bitwise XOR to prevent pointer shifts during conditional rendering: `const id = (hash(name) ^ depth ^ siblingIndex ^ (key || 0)) | 0;`
+  - **Epoch Tracking:** Every arena slot must track an `epoch` integer. The epoch increments when a slot is claimed.
+
+## 3. Hooks API
+- **`src/kernel/hooks.js`:** Implement `useState` and `useEffect` bound to the active arena pointer.
+  - **Hot Path Purity:** Hook retrieval must be an O(1) array lookup using a global `hookCursor`.
+  - **Async Protection:** State setter functions must capture the `epoch` at render time and verify it against the slot's current epoch before applying updates to drop invalid async "ghost" updates.
+  - **Dirty Bit Signaling:** State updates must flip the bitwise dirty flag on the component's arena pointer to trigger layout recalculation.
+
+## 4. Execution Plan (MANDATORY PAUSE)
+- Formulate a strict file-by-file plan detailing the creation of the `src/kernel/` modules and how they hook into the `Engine` class.
+- **MANDATORY:** Pause in "plan mode" and output the plan. Do NOT write or modify code until the user provides explicit approval ("yes").
+
+## 5. Engineering Guardrails
+- **Strict Math:** Maintain `| 0` for all indices, hashes, and bounds checking to satisfy V8's SMI optimizations.
+- **Zero Allocations in Hot Path:** Do not use `new`, `[]`, `{}`, or string hashes during the render or hook retrieval phases.
+- **Test Mandate:** Create `tests/kernel.test.js` to prove state stability, epoch validation, and dynamic resizing. All previous 18 tests (including `stress.test.js` and `core.test.js`) MUST pass.
+- Maintain `'use strict';` in all new files.
+
+Begin Phase 1 by acknowledging the architectural parameters and outputting the exact implementation plan.
+
+
+FILE_END .gemini/task 9e05f6ed1f21
+
+FILE_START CONTRIBUTING.md 20de6a8cb9ae
+# Contributing to libstitch
+
+## Engineering Standards
+
+To maintain high performance and V8 JIT friendliness, all contributions must adhere to these standards:
+
+### 1. Strict Mode
+Every JavaScript file must begin with `'use strict';`.
+
+### 2. Zero Floating-Point Math
+Core engine and layout calculations must use integer math. Use bitwise OR (`| 0`) to coerce results to 32-bit integers.
+```javascript
+const pos = ((container - item) / 2) | 0;
+```
+
+### 3. V8 JIT-Friendly Memory
+- Use `TypedArrays` (specifically `Uint32Array`) for grid data.
+- Avoid "Hidden Class" transitions by keeping objects monomorphic.
+- **Zero Allocations in Hot Paths:** Do not use `new`, `[]`, `{}`, or string concatenation inside the `diff` or `render` loops.
+
+### 4. Modular Architecture
+- Keep modules focused on a single responsibility.
+- Place files in their respective logical subfolders (`vram/`, `driver/`, `core/`, `layout/`).
+
+### 5. Testing
+- Create a corresponding test file in `tests/` for every new module.
+- Use Node's native test runner (`node:test`).
+- Ensure all tests pass before submitting changes.
+
+### 6. Code Style
+- Professional, formal tone in documentation and comments.
+- No hyperbole (avoid "blazingly fast", "ultimate", etc.).
+- Use descriptive variable names that reflect the bit-packed nature of the data where appropriate.
+
+FILE_END CONTRIBUTING.md 20de6a8cb9ae
+
+FILE_START README.md 69cda83061a0
+# libstitch
+
+A high-performance, modular, terminal-native UI engine built for the grid.
+
+## Core Philosophy
+libstitch is designed purely for the 2D integer grid of the terminal. It eschews document-tree models (like React) in favor of a lean, immediate-mode architecture optimized for the V8 JIT compiler.
+
+## Features
+- **Immediate Mode API:** Simple "paint" model for UI development.
+- **VRAM Buffer Diffing:** Optimized cell-matrix diffing to minimize TTY I/O.
+- **Bit-Packed Memory:** Uses `Uint32Array` to store character codes, colors, and styles in a single 32-bit integer.
+- **Zero Allocations:** Hot paths are designed to avoid garbage collection overhead.
+- **Strict Integer Math:** All layout and rendering logic uses integer calculations.
+
+## Architecture
+- `src/vram/`: Manages the dual-buffer grid and bit-packing logic.
+- `src/driver/`: Handles ANSI escape sequence generation and buffered stdout communication.
+- `src/core/`: The heart of the engine, containing the diffing algorithm and orchestrator.
+- `src/layout/`: Pure integer-based layout and constraint utilities.
+
+## Usage
+
+```javascript
+const Engine = require('./src/core/engine');
+
+const engine = new Engine();
+engine.start();
+
+engine.render((vram) => {
+  // Draw an 'A' at (10, 5) with Red Foreground (1)
+  vram.setCell(10, 5, 65, 1, 0, 0);
+  
+  // Draw a horizontal line
+  for (let x = 0; x < 20; x++) {
+    vram.setCell(x, 0, 45, 7, 0, 0);
+  }
+});
+
+// engine.stop() to restore terminal state
+```
+
+## Development
+Run tests using Node's native test runner:
+```bash
+node --test tests/
+```
+
+Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for engineering standards.
+
+FILE_END README.md 69cda83061a0
+
+FILE_START data/research_audit.md e0757c3ef91b
+# Research & Audit: libstitch Performance & V8 Optimization
+
+## 1. Audit Findings
+
+### 1.1 String Allocation in Hot Loops (`src/core/diff.js`)
+- **Issue:** `String.fromCodePoint(char)` is called for every modified cell. For a typical 80x24 terminal, a full frame update could trigger 1,920 calls.
+- **V8 Impact:** Repeated small string allocations increase garbage collection (GC) pressure.
+- **Optimization:** Use a `Uint8Array` to buffer UTF-8 bytes and write them to `stdout` in bulk. For ASCII (0-127), we can write directly to the byte buffer. For Unicode, we can use `TextEncoder`.
+
+### 1.2 ANSI Sequence Caching (`src/driver/ansi.js`)
+- **Issue:** `sgr(fg, bg, attr)` and `moveCursor(x, y)` perform string interpolation on every call.
+- **SGR Space:** 16 FG * 16 BG * 8 ATTR = 2,048 possible combinations.
+- **Cursor Space:** 255x255 (typical max) = 65,025 combinations.
+- **Optimization:** 
+    - Pre-compute all 2,048 SGR sequences and store them in a `StaticArray` or `Map`.
+    - Cache frequently used `moveCursor` sequences.
+
+### 1.3 Bitwise Sign Extension (`src/vram/bitmask.js`)
+- **Status:** Currently using `>>> 0` in `pack`, which is correct.
+- **Verification:** `(val >>> SHIFT) & MASK` in `unpack` and `diff.js` is safe because `>>>` is the unsigned shift operator.
+- **Potential Issue:** If any bitwise OR/AND result is used outside a `Uint32Array` or `>>> 0` context, it might be interpreted as a signed 32-bit integer.
+
+### 1.4 `StdoutDriver` Buffering (`src/driver/stdout.js`)
+- **Issue:** `this.buffer += str` creates "Cons Strings" in V8. While efficient for concatenation, deep trees can lead to flattening overhead.
+- **Optimization:** Use an `Array` to collect strings and `join('')` or use a pre-allocated `Buffer` / `Uint8Array`.
+
+## 2. Optimization Strategy
+
+### 2.1 SGR Lookup Table
+We will replace the `sgr()` function with a pre-computed array. This eliminates all runtime string manipulation for styles.
+
+### 2.2 Byte-Level Buffering
+Refactor `StdoutDriver` to use a `Uint8Array` instead of a string. This avoids string encoding overhead when writing to `process.stdout`.
+
+### 2.3 ASCII Fast-Path
+In `diff.js`, if `char < 128`, write it directly to the byte buffer as a single byte. Use `TextEncoder` only for characters $\ge 128$.
+
+### 2.4 Monomorphic `unpack`
+Refactor `diff.js` to avoid any object creation. The current implementation already does this by unpacking inline, but we should ensure no other helpers are allocating objects.
+
+FILE_END data/research_audit.md e0757c3ef91b
+
+FILE_START data/research_math.md f280dcadfaa8
+# libstitch Mathematical Verification: Discrete Set Theory & ILP
+
+This document establishes the mathematical foundations for the hardened libstitch engine.
+
+## 1. Symmetric Difference via Bitwise XOR
+
+In Discrete Set Theory, the symmetric difference of two sets $A$ and $B$, denoted $A \Delta B$, represents elements in either $A$ or $B$ but not both. For 32-bit integers (our bit-packed cells), the bitwise XOR operation ($\oplus$) is the binary equivalent of symmetric difference.
+
+### Proof of Efficiency
+Given:
+- $V_{front} \in \mathbb{Z}_{2^{32}}$
+- $V_{back} \in \mathbb{Z}_{2^{32}}$
+
+The detection of a mutation is defined by:
+$$f(V_{front}, V_{back}) = \begin{cases} 1 & \text{if } V_{front} \oplus V_{back} \neq 0 \\ 0 & \text{if } V_{front} \oplus V_{back} = 0 \end{cases}$$
+
+In V8, XORing two Small Integers (SMIs) is a single CPU instruction. While `!==` is also highly optimized, XOR allows for secondary masking without an extra comparison step if we only care about specific bit ranges (e.g., ignoring attributes for a fast diff).
+
+## 2. Integer Linear Programming (ILP) for Proportional Splitting
+
+The objective is to partition an integer $L$ (total length) into $n$ segments based on weight coefficients $w_1, w_2, \dots, w_n \in \mathbb{Z}^+$.
+
+### Formula
+1. Calculate total weight: $W = \sum_{i=1}^{n} w_i$
+2. Base allocation for segment $i$: $s_i = \lfloor \frac{L \cdot w_i}{W} \rfloor$
+3. Remainder: $R = L - \sum_{i=1}^{n} s_i$
+4. Distribution: Increment the first $R$ segments by 1 to ensure $\sum s_i = L$.
+
+### Stability Proof
+By using the remainder distribution, we guarantee:
+$$\sum_{i=1}^{n} s_i = L$$
+This eliminates "pixel gaps" or "terminal column drift" caused by floating-point rounding errors in traditional layout engines.
+
+## 3. Z-Order Composition
+
+Matrix composition with Z-order layering follows a non-commutative operation.
+Given layers $M_1, M_2, \dots, M_k$ where $M_k$ is the topmost layer.
+
+The final cell value $C_{x,y}$ is determined by the highest $z$ such that $M_z(x,y)$ is non-transparent.
+In libstitch, we use a bitmask for transparency (e.g., character code 0).
+
+$$C_{x,y} = \text{reduce}(M_1 \dots M_k, (acc, layer) \Rightarrow \text{blend}(acc, layer))$$
+
+To optimize, we perform composition in a single pass from top to bottom, using a bitmask to track "filled" cells.
+
+FILE_END data/research_math.md f280dcadfaa8
+
+FILE_START data/research_structure.md 9a116815d253
+# Research: libstitch Micro-Modularization Structure
+
+## 1. Domain Boundary Analysis
+
+### 1.1 `src/driver/`
+Currently, `ansi.js` serves as a monolithic utility for all ANSI-related logic. To strictly enforce SRP, it must be split into functional primitives.
+- **SGR (Select Graphic Rendition):** Management of color and attribute escape codes. Requires the 2,048-entry lookup table.
+- **Cursor:** Management of cursor movement sequences. Requires the 256x256 cache.
+- **Constants:** Static, non-calculated escape sequences.
+
+### 1.2 `src/vram/`
+The `VRAM` class in `buffer.js` currently handles both buffer state management and the complex Z-Order composition logic.
+- **Buffer:** State management (allocation, resizing, basic set/get).
+- **Composer:** Pure function logic for blending multiple layers. This is a distinct mathematical domain.
+
+### 1.3 `src/layout/`
+`compute.js` mixes simple geometric calculations with a complex Integer Linear Programming (ILP) partitioning algorithm.
+- **Primitives:** `center`, `alignEnd`, `clamp`.
+- **ILP:** Proportional partitioning logic (`split`).
+
+### 1.4 `src/core/`
+The `diff.js` file contains the core rendering hot path. It implements a Run-Length Encoding (RLE) strategy to minimize cursor movement.
+- **RLE Logic:** The inner `while` loop that consumes consecutive dirty cells.
+- **Analysis:** Extracting RLE into a separate module poses a risk of de-optimization if the function boundary prevents V8 from inlining. To maintain "Zero-Overhead", the RLE logic will be evaluated for extraction. If passed as a function, we must avoid passing objects (like `currentStyle`). Instead, we will pass SMIs or maintain state within the `diff` scope.
+
+## 2. Proposed Structure
+
+```text
+src/
+├── core/
+│   ├── diff.js        # Main diffing entry point
+│   └── rle.js         # Run-Length Encoding primitives (if feasible)
+├── driver/
+│   ├── ansi.js        # Facade for backward compatibility
+│   ├── constants.js   # ESC, RESET, HIDE_CURSOR, etc.
+│   ├── cursor.js      # Cursor Cache and moveCursor
+│   ├── sgr.js         # SGR Table and sgr()
+│   └── stdout.js      # Unchanged
+├── layout/
+│   ├── compute.js     # Geometric primitives
+│   └── ilp.js         # split() function
+└── vram/
+    ├── bitmask.js     # Unchanged
+    ├── buffer.js      # VRAM class (state)
+    └── composer.js    # compose() logic
+```
+
+## 3. Implementation Strategy
+
+- **Phase 1: Driver Refactor.** Isolate SGR, Cursor, and Constants.
+- **Phase 2: VRAM Refactor.** Move `compose` to `composer.js`.
+- **Phase 3: Layout Refactor.** Move `split` to `ilp.js`.
+- **Phase 4: Core Refactor.** Evaluate and execute RLE extraction.
+- **Phase 5: Test Alignment.** Update all `require` statements in `tests/*.js`.
+
+FILE_END data/research_structure.md 9a116815d253
+
+FILE_START data/research_terminal_engines.md e859ed395451
+# Research: Terminal UI Engines (Modular & JIT-Friendly)
+
+## 1. Immediate Mode GUI (IMGUI) vs Retained Mode
+- **Retained Mode (React-like):** The engine maintains a tree of components (VDOM). When state changes, it diffs the tree and updates the screen. High overhead for terminal grids.
+- **Immediate Mode:** The UI is "repainted" every frame. The user code describes what should be on the screen *right now*. The engine handles the diffing between the current frame and the previous frame at the cell level.
+- **Benefit for Terminals:** Simplifies layout and state management. Since the terminal is a fixed grid of integers, diffing two `Uint32Array` buffers is extremely fast.
+
+## 2. Terminal Cell-Matrix Diffing
+- **Core Concept:** Maintain two buffers: `frontBuffer` (what's currently on screen) and `backBuffer` (the next frame).
+- **Optimization:** To minimize the number of bytes sent to the TTY, only write cells that have changed.
+- **Run-Length Encoding (RLE) for Updates:** Instead of updating cell-by-cell, find horizontal "runs" of changed cells and send a single cursor-positioning sequence followed by the run of characters and styles.
+
+## 3. V8 JIT-Friendly Patterns
+- **TypedArrays (`Uint32Array`):** Essential for performance. They provide contiguous memory and avoid the overhead of JavaScript object property lookups.
+- **Bit-Packing:** Store multiple pieces of data (char code, FG, BG, style) in a single 32-bit integer.
+    - Example: `(char & 0x1FFFFF) | (fg << 21) | (bg << 25) | (style << 29)`
+- **Monomorphism:** Ensure functions in the hot path (like `setCell`) are always called with the same types (integers).
+- **Allocation-Free Hot Paths:** Avoid `new`, `[]`, `{}`, or string concatenation inside the render loop. Use pre-allocated buffers.
+- **Loop Optimization:** Use standard `for` loops. Avoid `forEach`, `map`, or `filter` on large arrays in the render path.
+
+## 4. Modular Engine Architecture
+- **VRAM (Virtual RAM):** Manages the `Uint32Array` buffers and bit-packing/unpacking logic.
+- **Layout:** Calculates integer-based bounding boxes and constraints.
+- **Diffing Engine:** Compares `backBuffer` and `frontBuffer` to generate a list of "dirty" regions.
+- **Driver:** Converts dirty regions into ANSI escape sequences and writes to `stdout`.
+
+## 5. References
+- IMGUI concepts from tools like `dear imgui`.
+- ANSI escape sequences for cursor manipulation and styling (SGR).
+- Node.js `process.stdout` and TTY capabilities.
+
+FILE_END data/research_terminal_engines.md e859ed395451
+
+FILE_START package.json 532d74552549
+{
+  "name": "libstitch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
+
+FILE_END package.json 532d74552549
+
+FILE_START src/core/diff.js 3beeb419f45e
+'use strict';
+
+const { moveCursor, sgr } = require('../driver/ansi');
+const { CHAR_MASK, FG_MASK, BG_MASK, ATTR_MASK, FG_SHIFT, BG_SHIFT, ATTR_SHIFT } = require('../vram/bitmask');
+
+/**
+ * Optimized cell-matrix diffing engine using Symmetric Difference (Bitwise XOR).
+ * Compares front and back buffers and writes minimal ANSI sequences to the driver.
+ * 
+ * @param {VRAM} vram - The VRAM instance.
+ * @param {StdoutDriver} driver - The output driver.
+ */
+function diff(vram, driver) {
+  const { width, height, frontBuffer, backBuffer } = vram;
+
+  let currentFg = -1;
+  let currentBg = -1;
+  let currentAttr = -1;
+
+  for (let y = 0; y < height; y = (y + 1) | 0) {
+    for (let x = 0; x < width; x = (x + 1) | 0) {
+      const index = (y * width + x) | 0;
+      const backVal = backBuffer[index] | 0;
+      const frontVal = frontBuffer[index] | 0;
+
+      // Symmetric Difference via Bitwise XOR
+      if ((backVal ^ frontVal) !== 0) {
+        // Start of a dirty run
+        driver.write(moveCursor(x, y));
+
+        // Consume consecutive dirty cells on the same line
+        let runX = x | 0;
+        while (runX < width) {
+          const runIndex = (y * width + runX) | 0;
+          const val = backBuffer[runIndex] | 0;
+          
+          // Unpack without object allocation
+          const char = (val & CHAR_MASK) | 0;
+          const fg = ((val >>> FG_SHIFT) & FG_MASK) | 0;
+          const bg = ((val >>> BG_SHIFT) & BG_MASK) | 0;
+          const attr = ((val >>> ATTR_SHIFT) & ATTR_MASK) | 0;
+
+          // Update style if changed
+          if (fg !== (currentFg | 0) || bg !== (currentBg | 0) || attr !== (currentAttr | 0)) {
+            driver.write(sgr(fg, bg, attr));
+            currentFg = fg | 0;
+            currentBg = bg | 0;
+            currentAttr = attr | 0;
+          }
+
+          // Write character
+          if (char < 128) {
+            driver.write(String.fromCharCode(char));
+          } else {
+            driver.write(String.fromCodePoint(char));
+          }
+
+          // Sync front buffer
+          frontBuffer[runIndex] = val | 0;
+
+          runX = (runX + 1) | 0;
+          // Peek next cell to see if we should continue the run
+          if (runX < width) {
+            const nextIndex = (y * width + runX) | 0;
+            if ((backBuffer[nextIndex] ^ frontBuffer[nextIndex]) === 0) {
+              break;
+            }
+          }
+        }
+        // Update loop X to end of run
+        x = (runX - 1) | 0;
+      }
+    }
+  }
+}
+
+module.exports = diff;
+
+FILE_END src/core/diff.js 3beeb419f45e
+
+FILE_START src/core/engine.js 001d01836c7c
+'use strict';
+
+const VRAM = require('../vram/buffer');
+const StdoutDriver = require('../driver/stdout');
+const { HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN, RESET } = require('../driver/ansi');
+const diff = require('./diff');
+const Arena = require('../kernel/arena');
+const Reconciler = require('../kernel/reconciler');
+const { bindHooks } = require('../kernel/hooks');
+
+/**
+ * libstitch Engine Orchestrator.
+ */
+class Engine {
+  constructor() {
+    this.driver = new StdoutDriver();
+    this.width = process.stdout.columns || 80;
+    this.height = process.stdout.rows || 24;
+    this.vram = new VRAM(this.width, this.height);
+
+    this.arena = new Arena();
+    this.reconciler = new Reconciler(this.arena);
+    bindHooks(this.reconciler);
+
+    this._boundResize = this._onResize.bind(this);
+  }
+
+  /**
+   * Starts the engine.
+   */
+  start() {
+    this.driver.write(HIDE_CURSOR);
+    this.driver.write(CLEAR_SCREEN);
+    this.driver.flush();
+    process.stdout.on('resize', this._boundResize);
+  }
+
+  /**
+   * Stops the engine.
+   */
+  stop() {
+    this.driver.write(RESET);
+    this.driver.write(SHOW_CURSOR);
+    this.driver.write(CLEAR_SCREEN);
+    this.driver.flush();
+    process.stdout.removeListener('resize', this._boundResize);
+  }
+
+  /**
+   * Handles terminal resize events.
+   * @private
+   */
+  _onResize() {
+    this.width = process.stdout.columns || 80;
+    this.height = process.stdout.rows || 24;
+    this.vram.resize(this.width, this.height);
+    this.driver.write(CLEAR_SCREEN);
+  }
+
+  /**
+   * Performs a render cycle.
+   * @param {function} drawFn - Function that receives (vram) and draws to the back buffer.
+   */
+  render(drawFn) {
+    // 1. Clear back buffer (or let user handle it)
+    // We'll provide a clean back buffer for immediate mode.
+    this.vram.clear(0);
+
+    // 2. Execute user draw logic
+    drawFn(this.vram);
+
+    // 3. Diff and flush
+    diff(this.vram, this.driver);
+    this.driver.flush();
+  }
+}
+
+module.exports = Engine;
+
+FILE_END src/core/engine.js 001d01836c7c
+
+FILE_START src/driver/ansi.js b51d96ad8f0e
+'use strict';
+
+const { moveCursor } = require('./cursor');
+const { sgr } = require('./sgr');
+const { RESET, HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN } = require('./constants');
+
+module.exports = {
+  moveCursor,
+  sgr,
+  RESET,
+  HIDE_CURSOR,
+  SHOW_CURSOR,
+  CLEAR_SCREEN,
+};
+
+FILE_END src/driver/ansi.js b51d96ad8f0e
+
+FILE_START src/driver/constants.js b58650ea8b94
+'use strict';
+
+const ESC = '\x1b[';
+const RESET = '\x1b[0m';
+const HIDE_CURSOR = '\x1b[?25l';
+const SHOW_CURSOR = '\x1b[?25h';
+const CLEAR_SCREEN = '\x1b[2J\x1b[H';
+
+module.exports = {
+  ESC,
+  RESET,
+  HIDE_CURSOR,
+  SHOW_CURSOR,
+  CLEAR_SCREEN,
+};
+
+FILE_END src/driver/constants.js b58650ea8b94
+
+FILE_START src/driver/cursor.js d0289ac180e5
+'use strict';
+
+const { ESC } = require('./constants');
+
+// Cursor Cache: 256x256 cache
+const CURSOR_CACHE = new Array(256 * 256);
+
+/**
+ * Moves cursor to (x, y). ANSI uses 1-based indexing (row, col).
+ * @param {number} x - 0-indexed column.
+ * @param {number} y - 0-indexed row.
+ * @returns {string}
+ */
+function moveCursor(x, y) {
+  const ix = x | 0;
+  const iy = y | 0;
+  if (ix < 256 && iy < 256) {
+    const index = (iy << 8) | ix;
+    let cached = CURSOR_CACHE[index];
+    if (cached === undefined) {
+      cached = CURSOR_CACHE[index] = `${ESC}${(iy + 1) | 0};${(ix + 1) | 0}H`;
+    }
+    return cached;
+  }
+  return `${ESC}${(iy + 1) | 0};${(ix + 1) | 0}H`;
+}
+
+module.exports = {
+  moveCursor,
+};
+
+FILE_END src/driver/cursor.js d0289ac180e5
+
+FILE_START src/driver/sgr.js 15796193eb96
+'use strict';
+
+// SGR Lookup Table: 16 FG * 16 BG * 8 ATTR = 2048 entries
+const SGR_TABLE = new Array(2048);
+
+function buildSgr(fg, bg, attr) {
+  let seq = '\x1b[0';
+  if (attr & 1) seq += ';1'; // Bold
+  if (attr & 2) seq += ';2'; // Dim
+  if (attr & 4) seq += ';4'; // Underline
+
+  if (fg < 8) seq += `;${30 + fg}`;
+  else seq += `;${90 + (fg - 8)}`;
+
+  if (bg < 8) seq += `;${40 + bg}`;
+  else seq += `;${100 + (bg - 8)}`;
+
+  return seq + 'm';
+}
+
+// Initialize SGR table
+for (let fg = 0; fg < 16; fg++) {
+  for (let bg = 0; bg < 16; bg++) {
+    for (let attr = 0; attr < 8; attr++) {
+      const index = (fg << 7) | (bg << 3) | attr;
+      SGR_TABLE[index] = buildSgr(fg, bg, attr);
+    }
+  }
+}
+
+/**
+ * Returns a pre-calculated SGR sequence.
+ * @param {number} fg 
+ * @param {number} bg 
+ * @param {number} attr 
+ * @returns {string}
+ */
+function sgr(fg, bg, attr) {
+  const index = (fg << 7) | (bg << 3) | attr;
+  return SGR_TABLE[index];
+}
+
+module.exports = {
+  sgr,
+};
+
+FILE_END src/driver/sgr.js 15796193eb96
+
+FILE_START src/driver/stdout.js 293a8baa2b17
+'use strict';
+
+/**
+ * Buffered output driver for libstitch.
+ * Minimizes process.stdout.write calls by batching strings.
+ * Uses Array.join('') to avoid Cons String flattening overhead.
+ */
+class StdoutDriver {
+  constructor() {
+    this.buffer = [];
+    this.length = 0;
+    this.stream = process.stdout;
+  }
+
+  /**
+   * Appends a string to the buffer.
+   * @param {string} str 
+   */
+  write(str) {
+    this.buffer.push(str);
+    this.length += str.length;
+    // Auto-flush if buffer gets too large (e.g., 16KB)
+    if (this.length > 16384) {
+      this.flush();
+    }
+  }
+
+  /**
+   * Flushes the buffer to stdout.
+   */
+  flush() {
+    if (this.buffer.length > 0) {
+      this.stream.write(this.buffer.join(''));
+      this.buffer.length = 0;
+      this.length = 0;
+    }
+  }
+}
+
+module.exports = StdoutDriver;
+
+FILE_END src/driver/stdout.js 293a8baa2b17
+
+FILE_START src/kernel/arena.js 7f8bc1340d91
+'use strict';
+
+/**
+ * Stitch-Arena: A memory-safe, zero-allocation arena allocator optimized for V8.
+ */
+class Arena {
+  /**
+   * @param {number} initialCapacity
+   */
+  constructor(initialCapacity = 1024) {
+    this.capacity = initialCapacity | 0;
+    this.length = 0;
+
+    // Meta: [Topology, Epoch, DirtyBit, ...reserved]
+    // 4 slots per logical element for SMI efficiency
+    this.meta = new Int32Array(this.capacity * 4);
+    this.refs = new Array(this.capacity);
+  }
+
+  /**
+   * Increases arena capacity.
+   * Doubles capacity to minimize re-allocation frequency.
+   */
+  grow() {
+    const oldCapacity = this.capacity | 0;
+    this.capacity = (oldCapacity * 2) | 0;
+
+    const oldMeta = this.meta;
+    this.meta = new Int32Array(this.capacity * 4);
+    this.meta.set(oldMeta);
+
+    // refs is a standard array, we just need to ensure it's resized or handled by V8
+    // We don't need .set() for standard Arrays, just increasing indices is fine.
+  }
+
+  /**
+   * Allocates a slot in the arena.
+   * @returns {number} The pointer (index) to the allocated slot.
+   */
+  alloc() {
+    if (this.length >= ((this.capacity * 0.9) | 0)) {
+      this.grow();
+    }
+
+    const ptr = this.length | 0;
+    this.length = (this.length + 1) | 0;
+
+    // Increment epoch for the new claim
+    const metaPtr = (ptr << 2) | 0;
+    this.meta[(metaPtr + 1) | 0] = (this.meta[(metaPtr + 1) | 0] + 1) | 0;
+
+    return ptr;
+  }
+
+  /**
+   * Explicitly frees a slot to prevent memory leaks.
+   * @param {number} ptr
+   */
+  free(ptr) {
+    const p = ptr | 0;
+    if (p < 0 || p >= this.length) return;
+
+    this.refs[p] = null;
+    const metaPtr = (p << 2) | 0;
+    this.meta[metaPtr] = 0; // Reset topology
+    this.meta[(metaPtr + 2) | 0] = 0; // Reset dirty bit
+  }
+
+  /**
+   * Marks a pointer as dirty.
+   * @param {number} ptr
+   */
+  setDirty(ptr) {
+    const metaPtr = (ptr << 2) | 0;
+    this.meta[(metaPtr + 2) | 0] = 1;
+  }
+
+  /**
+   * Checks if a pointer is dirty.
+   * @param {number} ptr
+   * @returns {boolean}
+   */
+  isDirty(ptr) {
+    const metaPtr = (ptr << 2) | 0;
+    return this.meta[(metaPtr + 2) | 0] === 1;
+  }
+
+  /**
+   * Gets the current epoch of a slot.
+   * @param {number} ptr
+   * @returns {number}
+   */
+  getEpoch(ptr) {
+    const metaPtr = (ptr << 2) | 0;
+    return this.meta[(metaPtr + 1) | 0] | 0;
+  }
+}
+
+module.exports = Arena;
+
+FILE_END src/kernel/arena.js 7f8bc1340d91
+
+FILE_START src/kernel/hooks.js 17ebf338046a
+'use strict';
+
+/**
+ * Stitch-Arena Hooks: State and effect management bound to the Arena.
+ */
+
+let activeReconciler = null;
+
+/**
+ * Binds hooks to a reconciler instance.
+ * @param {Reconciler} reconciler
+ */
+function bindHooks(reconciler) {
+  activeReconciler = reconciler;
+}
+
+/**
+ * useState hook.
+ * @param {any} initialState
+ * @returns {[any, function]}
+ */
+function useState(initialState) {
+  if (!activeReconciler || activeReconciler.currentContext === null) {
+    throw new Error('useState must be called within a component render.');
+  }
+
+  const ptr = activeReconciler.currentContext | 0;
+  const cursor = activeReconciler.hookCursor | 0;
+  activeReconciler.hookCursor = (activeReconciler.hookCursor + 1) | 0;
+
+  // We use a sub-allocation strategy for hooks within a component's refs slot
+  // Each component's refs slot will hold an array of its own hook states
+  if (activeReconciler.arena.refs[ptr] === null || activeReconciler.arena.refs[ptr] === undefined) {
+    activeReconciler.arena.refs[ptr] = [];
+  }
+
+  const hookState = activeReconciler.arena.refs[ptr];
+  
+  if (hookState[cursor] === undefined) {
+    hookState[cursor] = initialState;
+  }
+
+  const currentEpoch = activeReconciler.arena.getEpoch(ptr) | 0;
+
+  const setState = (newValue) => {
+    // Epoch validation to drop stale async updates
+    if (activeReconciler.arena.getEpoch(ptr) !== currentEpoch) {
+      return;
+    }
+
+    const nextValue = typeof newValue === 'function' ? newValue(hookState[cursor]) : newValue;
+    
+    if (hookState[cursor] !== nextValue) {
+      hookState[cursor] = nextValue;
+      activeReconciler.arena.setDirty(ptr);
+    }
+  };
+
+  return [hookState[cursor], setState];
+}
+
+/**
+ * useEffect hook.
+ * @param {function} effect
+ * @param {any[]} deps
+ */
+function useEffect(effect, deps) {
+  if (!activeReconciler || activeReconciler.currentContext === null) {
+    throw new Error('useEffect must be called within a component render.');
+  }
+
+  const ptr = activeReconciler.currentContext | 0;
+  const cursor = activeReconciler.hookCursor | 0;
+  activeReconciler.hookCursor = (activeReconciler.hookCursor + 1) | 0;
+
+  if (activeReconciler.arena.refs[ptr] === null || activeReconciler.arena.refs[ptr] === undefined) {
+    activeReconciler.arena.refs[ptr] = [];
+  }
+
+  const hookState = activeReconciler.arena.refs[ptr];
+  const prevDeps = hookState[cursor];
+
+  let hasChanged = true;
+  if (prevDeps && deps) {
+    hasChanged = deps.some((dep, i) => dep !== prevDeps[i]);
+  }
+
+  if (hasChanged) {
+    // In a real reconciler, effects are scheduled. 
+    // Here we execute immediately for simplicity, but in a full TUI they would run after diff.
+    effect();
+    hookState[cursor] = deps;
+  }
+}
+
+module.exports = {
+  bindHooks,
+  useState,
+  useEffect,
+};
+
+FILE_END src/kernel/hooks.js 17ebf338046a
+
+FILE_START src/kernel/reconciler.js 00d225ea46fa
+'use strict';
+
+/**
+ * Stitch-Arena Reconciler: Manages component identity and arena slot claiming.
+ */
+class Reconciler {
+  /**
+   * @param {Arena} arena
+   */
+  constructor(arena) {
+    this.arena = arena;
+    this.hashSlots = new Map(); // hash -> ptr
+    this.currentContext = null;
+    this.hookCursor = 0;
+  }
+
+  /**
+   * Simple string hash for component names.
+   * @param {string} str
+   * @returns {number}
+   */
+  hash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
+    }
+    return hash | 0;
+  }
+
+  /**
+   * Claims a slot in the arena for a component instance.
+   * @param {string} name
+   * @param {number} depth
+   * @param {number} siblingIndex
+   * @param {any} key
+   * @returns {number} The arena pointer.
+   */
+  claim(name, depth, siblingIndex, key) {
+    const nameHash = this.hash(name) | 0;
+    const keyHash = (key ? this.hash(String(key)) : 0) | 0;
+    const id = (nameHash ^ (depth | 0) ^ (siblingIndex | 0) ^ keyHash) | 0;
+
+    let ptr = this.hashSlots.get(id);
+    if (ptr === undefined) {
+      ptr = this.arena.alloc() | 0;
+      this.hashSlots.set(id, ptr);
+    }
+
+    return ptr | 0;
+  }
+
+  /**
+   * Sets the active render context.
+   * @param {number} ptr
+   */
+  enter(ptr) {
+    this.currentContext = ptr | 0;
+    this.hookCursor = 0;
+  }
+
+  /**
+   * Clears the render context.
+   */
+  exit() {
+    this.currentContext = null;
+    this.hookCursor = 0;
+  }
+}
+
+module.exports = Reconciler;
+
+FILE_END src/kernel/reconciler.js 00d225ea46fa
+
+FILE_START src/layout/compute.js bda7ead62d85
+'use strict';
+
+/**
+ * Integer-based layout computation for libstitch.
+ * All functions are pure mathematical functions using 32-bit integer math.
+ */
+
+/**
+ * Calculates the start position for centering an item within a container.
+ * @param {number} itemSize 
+ * @param {number} containerSize 
+ * @returns {number}
+ */
+function center(itemSize, containerSize) {
+  return (((containerSize | 0) - (itemSize | 0)) / 2) | 0;
+}
+
+/**
+ * Calculates the start position for end-aligning an item.
+ * @param {number} itemSize 
+ * @param {number} containerSize 
+ * @returns {number}
+ */
+function alignEnd(itemSize, containerSize) {
+  return ((containerSize | 0) - (itemSize | 0)) | 0;
+}
+
+/**
+ * Clamps a value between min and max.
+ * @param {number} val 
+ * @param {number} min 
+ * @param {number} max 
+ * @returns {number}
+ */
+function clamp(val, min, max) {
+  const v = val | 0;
+  const mi = min | 0;
+  const ma = max | 0;
+  if (v < mi) return mi;
+  if (v > ma) return ma;
+  return v;
+}
+
+module.exports = {
+  center,
+  alignEnd,
+  clamp,
+};
+
+FILE_END src/layout/compute.js bda7ead62d85
+
+FILE_START src/layout/constraints.js 0bb4a735d1ec
+'use strict';
+
+/**
+ * Layout constraints and box model utilities for libstitch.
+ */
+
+class Rect {
+  constructor(x = 0, y = 0, width = 0, height = 0) {
+    this.x = x | 0;
+    this.y = y | 0;
+    this.width = width | 0;
+    this.height = height | 0;
+  }
+
+  /**
+   * Applies padding to a rect, returning a new inner rect.
+   * @param {number} top 
+   * @param {number} right 
+   * @param {number} bottom 
+   * @param {number} left 
+   * @returns {Rect}
+   */
+  pad(top, right, bottom, left) {
+    return new Rect(
+      this.x + left,
+      this.y + top,
+      Math.max(0, this.width - left - right) | 0,
+      Math.max(0, this.height - top - bottom) | 0
+    );
+  }
+
+  /**
+   * Checks if a point is within the rect.
+   * @param {number} x 
+   * @param {number} y 
+   * @returns {boolean}
+   */
+  contains(x, y) {
+    return (
+      x >= this.x &&
+      x < this.x + this.width &&
+      y >= this.y &&
+      y < this.y + this.height
+    );
+  }
+}
+
+module.exports = {
+  Rect,
+};
+
+FILE_END src/layout/constraints.js 0bb4a735d1ec
+
+FILE_START src/layout/ilp.js 96305db3aea8
+'use strict';
+
+/**
+ * Partitions totalSize into segments proportional to the weights in ratios.
+ * Uses Integer Linear Programming (ILP) with remainder distribution to ensure
+ * the sum of returned segments exactly equals totalSize.
+ * 
+ * @param {number} totalSize - The total integer space to split.
+ * @param {number[]} ratios - Array of integer weight coefficients.
+ * @returns {Int32Array} - Array of segment sizes.
+ */
+function split(totalSize, ratios) {
+  const len = ratios.length;
+  const size = totalSize | 0;
+  const result = new Int32Array(len);
+  
+  let totalWeight = 0;
+  for (let i = 0; i < len; i++) {
+    totalWeight = (totalWeight + (ratios[i] | 0)) | 0;
+  }
+
+  if (totalWeight === 0) return result;
+
+  let allocated = 0;
+  for (let i = 0; i < len; i++) {
+    const s = ((size * (ratios[i] | 0)) / totalWeight) | 0;
+    result[i] = s;
+    allocated = (allocated + s) | 0;
+  }
+
+  let remainder = (size - allocated) | 0;
+  // Distribute remainder to segments starting from the first one
+  for (let i = 0; i < len && remainder > 0; i++) {
+    result[i] = (result[i] + 1) | 0;
+    remainder = (remainder - 1) | 0;
+  }
+
+  return result;
+}
+
+module.exports = {
+  split,
+};
+
+FILE_END src/layout/ilp.js 96305db3aea8
+
+FILE_START src/vram/bitmask.js 87c5bafc67eb
+'use strict';
+
+/**
+ * libstitch bitmasking utilities for cell data.
+ * 
+ * Cell Bit Layout (32 bits):
+ * 00-20: Unicode Codepoint (21 bits)
+ * 21-24: Foreground Color (4 bits, 16-color ANSI)
+ * 25-28: Background Color (4 bits, 16-color ANSI)
+ * 29-31: Attributes (3 bits: Bold, Dim, Underline)
+ */
+
+const CHAR_MASK = 0x1FFFFF;
+const FG_MASK = 0xF;
+const BG_MASK = 0xF;
+const ATTR_MASK = 0x7;
+
+const FG_SHIFT = 21;
+const BG_SHIFT = 25;
+const ATTR_SHIFT = 29;
+
+/**
+ * Packs cell data into a single 32-bit unsigned integer.
+ * @param {number} char - Unicode codepoint.
+ * @param {number} fg - Foreground color (0-15).
+ * @param {number} bg - Background color (0-15).
+ * @param {number} attr - Attributes (0-7).
+ * @returns {number} Packed 32-bit integer.
+ */
+function pack(char, fg, bg, attr) {
+  return (
+    (char & CHAR_MASK) |
+    ((fg & FG_MASK) << FG_SHIFT) |
+    ((bg & BG_MASK) << BG_SHIFT) |
+    ((attr & ATTR_MASK) << ATTR_SHIFT)
+  ) >>> 0;
+}
+
+/**
+ * Unpacks a 32-bit integer into its cell components.
+ * @param {number} val - Packed 32-bit integer.
+ * @returns {object} Object containing char, fg, bg, and attr.
+ */
+function unpack(val) {
+  return {
+    char: val & CHAR_MASK,
+    fg: (val >>> FG_SHIFT) & FG_MASK,
+    bg: (val >>> BG_SHIFT) & BG_MASK,
+    attr: (val >>> ATTR_SHIFT) & ATTR_MASK,
+  };
+}
+
+module.exports = {
+  pack,
+  unpack,
+  CHAR_MASK,
+  FG_MASK,
+  BG_MASK,
+  ATTR_MASK,
+  FG_SHIFT,
+  BG_SHIFT,
+  ATTR_SHIFT,
+};
+
+FILE_END src/vram/bitmask.js 87c5bafc67eb
+
+FILE_START src/vram/buffer.js a8d8dc974e3b
+'use strict';
+
+const { pack } = require('./bitmask');
+const { compose } = require('./composer');
+
+/**
+ * VRAM manages dual buffers for terminal cell data.
+ * It provides methods for manipulating the back buffer and swapping with the front buffer.
+ * Now supports mathematical Z-Order composition.
+ */
+class VRAM {
+  /**
+   * @param {number} width - Grid width.
+   * @param {number} height - Grid height.
+   */
+  constructor(width, height) {
+    this.width = width | 0;
+    this.height = height | 0;
+    this.size = (this.width * this.height) | 0;
+
+    this.frontBuffer = new Uint32Array(this.size);
+    this.backBuffer = new Uint32Array(this.size);
+  }
+
+  /**
+   * Resizes the buffers.
+   * @param {number} width 
+   * @param {number} height 
+   */
+  resize(width, height) {
+    this.width = width | 0;
+    this.height = height | 0;
+    this.size = (this.width * this.height) | 0;
+
+    this.frontBuffer = new Uint32Array(this.size);
+    this.backBuffer = new Uint32Array(this.size);
+  }
+
+  /**
+   * Sets a cell in the back buffer.
+   * @param {number} x 
+   * @param {number} y 
+   * @param {number} char 
+   * @param {number} fg 
+   * @param {number} bg 
+   * @param {number} attr 
+   */
+  setCell(x, y, char, fg, bg, attr) {
+    const ix = x | 0;
+    const iy = y | 0;
+    const w = this.width | 0;
+    const h = this.height | 0;
+    if (ix < 0 || ix >= w || iy < 0 || iy >= h) return;
+    const index = (iy * w + ix) | 0;
+    this.backBuffer[index] = pack(char, fg, bg, attr);
+  }
+
+  /**
+   * Gets a cell from the back buffer.
+   * @param {number} x 
+   * @param {number} y 
+   * @returns {number}
+   */
+  getCell(x, y) {
+    const ix = x | 0;
+    const iy = y | 0;
+    const w = this.width | 0;
+    const h = this.height | 0;
+    if (ix < 0 || ix >= w || iy < 0 || iy >= h) return 0;
+    return this.backBuffer[(iy * w + ix) | 0] | 0;
+  }
+
+  /**
+   * Clears the back buffer.
+   * @param {number} clearValue 
+   */
+  clear(clearValue = 0) {
+    this.backBuffer.fill(clearValue | 0);
+  }
+
+  /**
+   * Swaps the back buffer into the front buffer.
+   */
+  swap() {
+    this.frontBuffer.set(this.backBuffer);
+  }
+
+  /**
+   * Composes multiple VRAM layers into this VRAM's back buffer.
+   * Composition is performed Top-to-Bottom for performance.
+   * 
+   * @param {VRAM[]} layers - Array of VRAM instances, ordered Bottom-to-Top.
+   */
+  compose(layers) {
+    compose(this.backBuffer, this.size, layers);
+  }
+}
+
+module.exports = VRAM;
+
+FILE_END src/vram/buffer.js a8d8dc974e3b
+
+FILE_START src/vram/composer.js 33ba7dfe0e04
+'use strict';
+
+const { CHAR_MASK } = require('./bitmask');
+
+/**
+ * Composes multiple VRAM layers into a target buffer.
+ * Composition is performed Top-to-Bottom for performance.
+ * A cell is filled by the first non-transparent (char != 0) layer encountered.
+ * 
+ * @param {Uint32Array} target - The target back buffer.
+ * @param {number} size - Size of the buffers.
+ * @param {VRAM[]} layers - Array of VRAM instances, ordered Bottom-to-Top.
+ */
+function compose(target, size, layers) {
+  const s = size | 0;
+  target.fill(0);
+
+  // Track which cells are already filled
+  const filled = new Uint8Array(s);
+  let remaining = s | 0;
+
+  // Iterate from Top (last) to Bottom (first)
+  for (let i = (layers.length - 1) | 0; i >= 0 && remaining > 0; i = (i - 1) | 0) {
+    const layer = layers[i];
+    const layerBuffer = layer.backBuffer;
+    const layerSize = layer.size | 0;
+    
+    const limit = (layerSize < s ? layerSize : s) | 0;
+
+    for (let j = 0; j < limit; j = (j + 1) | 0) {
+      if (filled[j] === 0) {
+        const val = layerBuffer[j] | 0;
+        if ((val & CHAR_MASK) !== 0) {
+          target[j] = val;
+          filled[j] = 1;
+          remaining = (remaining - 1) | 0;
+        }
+      }
+    }
+  }
+}
+
+module.exports = {
+  compose,
+};
+
+FILE_END src/vram/composer.js 33ba7dfe0e04
+
+FILE_START tests/core.test.js 18e689de37d8
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const VRAM = require('../src/vram/buffer');
+const diff = require('../src/core/diff');
+
+class MockDriver {
+  constructor() {
+    this.output = '';
+  }
+  write(str) {
+    this.output += str;
+  }
+  flush() {}
+}
+
+test('diffing logic - horizontal run', () => {
+  const vram = new VRAM(10, 2);
+  const driver = new MockDriver();
+
+  // Set two consecutive cells on first line
+  vram.setCell(0, 0, 65, 1, 0, 0); // 'A', Red
+  vram.setCell(1, 0, 66, 1, 0, 0); // 'B', Red
+
+  diff(vram, driver);
+
+  // Should have moveCursor(0, 0), SGR, 'A', 'B'
+  assert.match(driver.output, /1;1H/); // Move to 0,0 (1,1)
+  assert.match(driver.output, /31/);   // Red FG
+  assert.match(driver.output, /AB/);   // Text
+});
+
+test('diffing logic - partial update', () => {
+  const vram = new VRAM(10, 2);
+  const driver = new MockDriver();
+
+  // Frame 1
+  vram.setCell(0, 0, 65, 1, 0, 0);
+  diff(vram, driver);
+  driver.output = ''; // Reset mock for Frame 2
+
+  // Frame 2: Change only one cell
+  vram.setCell(1, 0, 66, 1, 0, 0);
+  diff(vram, driver);
+
+  assert.strictEqual(driver.output.includes('A'), false); // A should not be re-written
+  assert.match(driver.output, /B/);
+});
+
+FILE_END tests/core.test.js 18e689de37d8
+
+FILE_START tests/driver.test.js 70765a056933
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const { moveCursor, sgr, RESET } = require('../src/driver/ansi');
+
+test('moveCursor sequence', () => {
+  assert.strictEqual(moveCursor(0, 0), '\x1b[1;1H');
+  assert.strictEqual(moveCursor(10, 5), '\x1b[6;11H');
+});
+
+test('sgr sequence', () => {
+  // FG 1 (Red), BG 0 (Black), Attr 1 (Bold)
+  // Expected: \x1b[0;1;31;40m
+  assert.strictEqual(sgr(1, 0, 1), '\x1b[0;1;31;40m');
+
+  // Bright FG 10 (Bright Green), Bright BG 12 (Bright Blue), No Attr
+  // Expected: \x1b[0;92;104m
+  assert.strictEqual(sgr(10, 12, 0), '\x1b[0;92;104m');
+});
+
+test('RESET constant', () => {
+  assert.strictEqual(RESET, '\x1b[0m');
+});
+
+FILE_END tests/driver.test.js 70765a056933
+
+FILE_START tests/kernel.test.js 114ef68d932b
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const Arena = require('../src/kernel/arena');
+const Reconciler = require('../src/kernel/reconciler');
+const { bindHooks, useState } = require('../src/kernel/hooks');
+
+test('Arena dynamic resizing', () => {
+  const arena = new Arena(10);
+  for (let i = 0; i < 20; i++) {
+    arena.alloc();
+  }
+  assert.strictEqual(arena.capacity >= 20, true);
+});
+
+test('Reconciler stable hashing', () => {
+  const arena = new Arena();
+  const rec = new Reconciler(arena);
+  
+  const ptr1 = rec.claim('Component', 1, 0, null);
+  const ptr2 = rec.claim('Component', 1, 0, null);
+  const ptr3 = rec.claim('Component', 1, 1, null);
+  
+  assert.strictEqual(ptr1, ptr2);
+  assert.notStrictEqual(ptr1, ptr3);
+});
+
+test('Hook state and epoch validation', () => {
+  const arena = new Arena();
+  const rec = new Reconciler(arena);
+  bindHooks(rec);
+
+  const ptr = rec.claim('Test', 0, 0, null);
+  rec.enter(ptr);
+  
+  const [val, setVal] = useState(0);
+  assert.strictEqual(val, 0);
+  
+  setVal(1);
+  assert.strictEqual(arena.refs[ptr][0], 1);
+  assert.strictEqual(arena.isDirty(ptr), true);
+  
+  // Simulate re-render or unmount (increment epoch for THIS slot)
+  const metaPtr = (ptr << 2) | 0;
+  arena.meta[(metaPtr + 1) | 0] = (arena.meta[(metaPtr + 1) | 0] + 1) | 0;
+  
+  // Try stale update
+  setVal(2);
+  assert.strictEqual(arena.refs[ptr][0], 1); // Value should NOT change
+});
+
+test('Memory safety (free)', () => {
+  const arena = new Arena();
+  const ptr = arena.alloc();
+  arena.refs[ptr] = { data: 'leak' };
+  
+  arena.free(ptr);
+  assert.strictEqual(arena.refs[ptr], null);
+});
+
+FILE_END tests/kernel.test.js 114ef68d932b
+
+FILE_START tests/layout.test.js 8d213fd12892
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const { center, alignEnd, clamp } = require('../src/layout/compute');
+const { split } = require('../src/layout/ilp');
+const { Rect } = require('../src/layout/constraints');
+
+test('layout compute - center', () => {
+  assert.strictEqual(center(10, 100), 45);
+  assert.strictEqual(center(3, 10), 3); // (10-3)/2 = 3.5 -> 3
+});
+
+test('layout compute - alignEnd', () => {
+  assert.strictEqual(alignEnd(10, 100), 90);
+});
+
+test('layout compute - clamp', () => {
+  assert.strictEqual(clamp(5, 0, 10), 5);
+  assert.strictEqual(clamp(-1, 0, 10), 0);
+  assert.strictEqual(clamp(15, 0, 10), 10);
+});
+
+test('layout compute - split (ILP)', () => {
+  // Simple equal split
+  const res1 = split(80, [1, 1, 1, 1]);
+  assert.deepStrictEqual(res1, new Int32Array([20, 20, 20, 20]));
+  assert.strictEqual(res1.reduce((a, b) => a + b, 0), 80);
+
+  // Remainder distribution
+  const res2 = split(81, [1, 1, 1, 1]);
+  assert.deepStrictEqual(res2, new Int32Array([21, 20, 20, 20]));
+  assert.strictEqual(res2.reduce((a, b) => a + b, 0), 81);
+
+  // Complex weights
+  const res3 = split(100, [1, 2, 1]);
+  assert.deepStrictEqual(res3, new Int32Array([25, 50, 25]));
+  assert.strictEqual(res3.reduce((a, b) => a + b, 0), 100);
+
+  // Large remainder
+  const res4 = split(10, [3, 3, 3]); // base 10*3/9 = 3. 3*3=9. remainder 1.
+  assert.deepStrictEqual(res4, new Int32Array([4, 3, 3]));
+  assert.strictEqual(res4.reduce((a, b) => a + b, 0), 10);
+});
+
+test('Rect - pad', () => {
+  const r = new Rect(0, 0, 100, 50);
+  const inner = r.pad(5, 10, 5, 10);
+  assert.strictEqual(inner.x, 10);
+  assert.strictEqual(inner.y, 5);
+  assert.strictEqual(inner.width, 80);
+  assert.strictEqual(inner.height, 40);
+});
+
+test('Rect - contains', () => {
+  const r = new Rect(10, 10, 20, 20);
+  assert.strictEqual(r.contains(15, 15), true);
+  assert.strictEqual(r.contains(5, 5), false);
+  assert.strictEqual(r.contains(30, 30), false);
+});
+
+FILE_END tests/layout.test.js 8d213fd12892
+
+FILE_START tests/stress.test.js 1d052f3f9998
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const { performance } = require('node:perf_hooks');
+const VRAM = require('../src/vram/buffer');
+const diff = require('../src/core/diff');
+
+class MockDriver {
+  constructor() {
+    this.buffer = [];
+    this.length = 0;
+  }
+  write(str) {
+    this.buffer.push(str);
+    this.length += str.length;
+  }
+  flush() {
+    this.buffer.length = 0;
+    this.length = 0;
+  }
+}
+
+test('Stress Test: 10,000 frames', () => {
+  const width = 80;
+  const height = 24;
+  const vram = new VRAM(width, height);
+  const driver = new MockDriver();
+  
+  const start = performance.now();
+  
+  for (let frame = 0; frame < 10000; frame++) {
+    // Simulate some activity: update 10 random cells
+    for (let i = 0; i < 10; i++) {
+      const x = (Math.random() * width) | 0;
+      const y = (Math.random() * height) | 0;
+      const char = 65 + ((Math.random() * 26) | 0);
+      const fg = (Math.random() * 16) | 0;
+      const bg = (Math.random() * 16) | 0;
+      vram.setCell(x, y, char, fg, bg, 0);
+    }
+    
+    diff(vram, driver);
+    driver.flush();
+  }
+  
+  const end = performance.now();
+  const duration = end - start;
+  
+  console.log(`Stress test completed in ${duration.toFixed(2)}ms (${(duration / 10000).toFixed(4)}ms/frame)`);
+  
+  // Assert that it's reasonably fast. 
+  // 10,000 frames in 1 second is 0.1ms/frame.
+  // We'll be generous and allow 5 seconds (0.5ms/frame).
+  assert.ok(duration < 5000, `Execution time too high: ${duration}ms`);
+});
+
+test('Stability Test: Memory and Performance', () => {
+  const width = 80;
+  const height = 24;
+  const vram = new VRAM(width, height);
+  const driver = new MockDriver();
+
+  const frameTimes = [];
+
+  for (let frame = 0; frame < 5000; frame++) {
+    // Full frame update every 100 frames to stress diffing
+    const updateAll = (frame % 100 === 0);
+    
+    if (updateAll) {
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          vram.setCell(x, y, 65, 7, 0, 0);
+        }
+      }
+    } else {
+      vram.setCell((Math.random() * width) | 0, (Math.random() * height) | 0, 66, 2, 0, 0);
+    }
+
+    const s = performance.now();
+    diff(vram, driver);
+    driver.flush();
+    const e = performance.now();
+    frameTimes.push(e - s);
+  }
+
+  // Check if frame times are stable (not increasing significantly)
+  const firstHalf = frameTimes.slice(0, 2500);
+  const secondHalf = frameTimes.slice(2500);
+  
+  const avg1 = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+  const avg2 = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+  
+  console.log(`Average Frame Time (First Half): ${avg1.toFixed(4)}ms`);
+  console.log(`Average Frame Time (Second Half): ${avg2.toFixed(4)}ms`);
+  
+  // Allow a small margin for system variance, but no 2x jumps.
+  assert.ok(avg2 < avg1 * 2, `Performance degraded significantly: ${avg1} -> ${avg2}`);
+});
+
+FILE_END tests/stress.test.js 1d052f3f9998
+
+FILE_START tests/vram.test.js e618750582a0
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const { pack, unpack } = require('../src/vram/bitmask');
+const VRAM = require('../src/vram/buffer');
+
+test('bitmask pack/unpack', () => {
+  const char = 65; // 'A'
+  const fg = 1;    // Red
+  const bg = 4;    // Blue
+  const attr = 1;  // Bold
+
+  const packed = pack(char, fg, bg, attr);
+  const unpacked = unpack(packed);
+
+  assert.strictEqual(unpacked.char, char);
+  assert.strictEqual(unpacked.fg, fg);
+  assert.strictEqual(unpacked.bg, bg);
+  assert.strictEqual(unpacked.attr, attr);
+});
+
+test('bitmask boundaries', () => {
+  const char = 0x1FFFFF;
+  const fg = 15;
+  const bg = 15;
+  const attr = 7;
+
+  const packed = pack(char, fg, bg, attr);
+  const unpacked = unpack(packed);
+
+  assert.strictEqual(unpacked.char, char);
+  assert.strictEqual(unpacked.fg, fg);
+  assert.strictEqual(unpacked.bg, bg);
+  assert.strictEqual(unpacked.attr, attr);
+});
+
+test('VRAM initialization and setCell', () => {
+  const vram = new VRAM(10, 5);
+  assert.strictEqual(vram.width, 10);
+  assert.strictEqual(vram.height, 5);
+  assert.strictEqual(vram.size, 50);
+
+  vram.setCell(2, 2, 65, 1, 0, 0);
+  const val = vram.getCell(2, 2);
+  const unpacked = unpack(val);
+
+  assert.strictEqual(unpacked.char, 65);
+  assert.strictEqual(unpacked.fg, 1);
+});
+
+test('VRAM clear', () => {
+  const vram = new VRAM(10, 5);
+  vram.setCell(0, 0, 65, 1, 1, 1);
+  vram.clear(0);
+  assert.strictEqual(vram.getCell(0, 0), 0);
+});
+
+test('VRAM swap', () => {
+  const vram = new VRAM(10, 5);
+  vram.setCell(5, 2, 66, 2, 0, 0);
+  vram.swap();
+  assert.strictEqual(vram.frontBuffer[2 * 10 + 5], vram.backBuffer[2 * 10 + 5]);
+});
+
+FILE_END tests/vram.test.js e618750582a0
+
