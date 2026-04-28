@@ -4,7 +4,7 @@
  * Layout constraints and box model utilities for libstitch.
  */
 
-class Rect {
+export class Rect {
   constructor(x = 0, y = 0, width = 0, height = 0) {
     this.x = x | 0;
     this.y = y | 0;
@@ -44,7 +44,3 @@ class Rect {
     );
   }
 }
-
-module.exports = {
-  Rect,
-};

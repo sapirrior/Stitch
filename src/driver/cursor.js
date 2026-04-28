@@ -1,6 +1,6 @@
 'use strict';
 
-const { ESC } = require('./constants');
+import { ESC } from './constants.js';
 
 // Cursor Cache: 256x256 cache
 const CURSOR_CACHE = new Array(256 * 256);
@@ -11,7 +11,7 @@ const CURSOR_CACHE = new Array(256 * 256);
  * @param {number} y - 0-indexed row.
  * @returns {string}
  */
-function moveCursor(x, y) {
+export function moveCursor(x, y) {
   const ix = x | 0;
   const iy = y | 0;
   if (ix < 256 && iy < 256) {
@@ -24,7 +24,3 @@ function moveCursor(x, y) {
   }
   return `${ESC}${(iy + 1) | 0};${(ix + 1) | 0}H`;
 }
-
-module.exports = {
-  moveCursor,
-};

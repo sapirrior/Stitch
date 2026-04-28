@@ -1,12 +1,12 @@
 'use strict';
 
-const VRAM = require('../vram/buffer');
-const StdoutDriver = require('../driver/stdout');
-const { HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN, RESET } = require('../driver/ansi');
-const diff = require('./diff');
-const Arena = require('../kernel/arena');
-const Reconciler = require('../kernel/reconciler');
-const { bindHooks } = require('../kernel/hooks');
+import VRAM from '../vram/buffer.js';
+import StdoutDriver from '../driver/stdout.js';
+import { HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN, RESET } from '../driver/ansi.js';
+import diff from './diff.js';
+import Arena from '../kernel/arena.js';
+import Reconciler from '../kernel/reconciler.js';
+import { bindHooks } from '../kernel/hooks.js';
 
 /**
  * libstitch Engine Orchestrator.
@@ -75,4 +75,4 @@ class Engine {
   }
 }
 
-module.exports = Engine;
+export default Engine;

@@ -1,10 +1,10 @@
 'use strict';
 
-const test = require('node:test');
-const assert = require('node:assert');
-const { performance } = require('node:perf_hooks');
-const VRAM = require('../src/vram/buffer');
-const diff = require('../src/core/diff');
+import test from 'node:test';
+import assert from 'node:assert';
+import { performance } from 'node:perf_hooks';
+import VRAM from '../src/vram/buffer.js';
+import diff from '../src/core/diff.js';
 
 class MockDriver {
   constructor() {

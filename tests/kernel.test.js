@@ -1,10 +1,10 @@
 'use strict';
 
-const test = require('node:test');
-const assert = require('node:assert');
-const Arena = require('../src/kernel/arena');
-const Reconciler = require('../src/kernel/reconciler');
-const { bindHooks, useState } = require('../src/kernel/hooks');
+import test from 'node:test';
+import assert from 'node:assert';
+import Arena from '../src/kernel/arena.js';
+import Reconciler from '../src/kernel/reconciler.js';
+import { bindHooks, useState } from '../src/kernel/hooks.js';
 
 test('Arena dynamic resizing', () => {
   const arena = new Arena(10);

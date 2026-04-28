@@ -1,10 +1,10 @@
 'use strict';
 
-const { moveCursor } = require('./cursor');
-const { sgr } = require('./sgr');
-const { RESET, HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN } = require('./constants');
+import { moveCursor } from './cursor.js';
+import { sgr } from './sgr.js';
+import { RESET, HIDE_CURSOR, SHOW_CURSOR, CLEAR_SCREEN } from './constants.js';
 
-module.exports = {
+export {
   moveCursor,
   sgr,
   RESET,

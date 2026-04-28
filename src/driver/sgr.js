@@ -35,11 +35,7 @@ for (let fg = 0; fg < 16; fg++) {
  * @param {number} attr 
  * @returns {string}
  */
-function sgr(fg, bg, attr) {
+export function sgr(fg, bg, attr) {
   const index = (fg << 7) | (bg << 3) | attr;
   return SGR_TABLE[index];
 }
-
-module.exports = {
-  sgr,
-};

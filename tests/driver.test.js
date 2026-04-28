@@ -1,8 +1,8 @@
 'use strict';
 
-const test = require('node:test');
-const assert = require('node:assert');
-const { moveCursor, sgr, RESET } = require('../src/driver/ansi');
+import test from 'node:test';
+import assert from 'node:assert';
+import { moveCursor, sgr, RESET } from '../src/driver/ansi.js';
 
 test('moveCursor sequence', () => {
   assert.strictEqual(moveCursor(0, 0), '\x1b[1;1H');

@@ -1,9 +1,9 @@
 'use strict';
 
-const test = require('node:test');
-const assert = require('node:assert');
-const { pack, unpack } = require('../src/vram/bitmask');
-const VRAM = require('../src/vram/buffer');
+import test from 'node:test';
+import assert from 'node:assert';
+import { pack, unpack } from '../src/vram/bitmask.js';
+import VRAM from '../src/vram/buffer.js';
 
 test('bitmask pack/unpack', () => {
   const char = 65; // 'A'

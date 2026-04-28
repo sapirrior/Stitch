@@ -67,4 +67,4 @@ class Reconciler {
   }
 }
 
-module.exports = Reconciler;
+export default Reconciler;

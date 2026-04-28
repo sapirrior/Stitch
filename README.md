@@ -21,7 +21,7 @@ libstitch is designed purely for the 2D integer grid of the terminal. It eschews
 ## Usage
 
 ```javascript
-const Engine = require('./src/core/engine');
+import Engine from './src/core/engine.js';
 
 const engine = new Engine();
 engine.start();

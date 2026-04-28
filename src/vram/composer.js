@@ -1,6 +1,6 @@
 'use strict';
 
-const { CHAR_MASK } = require('./bitmask');
+import { CHAR_MASK } from './bitmask.js';
 
 /**
  * Composes multiple VRAM layers into a target buffer.
@@ -40,6 +40,6 @@ function compose(target, size, layers) {
   }
 }
 
-module.exports = {
+export {
   compose,
 };

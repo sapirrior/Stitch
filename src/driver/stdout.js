@@ -37,4 +37,4 @@ class StdoutDriver {
   }
 }
 
-module.exports = StdoutDriver;
+export default StdoutDriver;

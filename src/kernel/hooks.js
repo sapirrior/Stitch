@@ -10,7 +10,7 @@ let activeReconciler = null;
  * Binds hooks to a reconciler instance.
  * @param {Reconciler} reconciler
  */
-function bindHooks(reconciler) {
+export function bindHooks(reconciler) {
   activeReconciler = reconciler;
 }
 
@@ -19,7 +19,7 @@ function bindHooks(reconciler) {
  * @param {any} initialState
  * @returns {[any, function]}
  */
-function useState(initialState) {
+export function useState(initialState) {
   if (!activeReconciler || activeReconciler.currentContext === null) {
     throw new Error('useState must be called within a component render.');
   }
@@ -64,7 +64,7 @@ function useState(initialState) {
  * @param {function} effect
  * @param {any[]} deps
  */
-function useEffect(effect, deps) {
+export function useEffect(effect, deps) {
   if (!activeReconciler || activeReconciler.currentContext === null) {
     throw new Error('useEffect must be called within a component render.');
   }
@@ -92,9 +92,3 @@ function useEffect(effect, deps) {
     hookState[cursor] = deps;
   }
 }
-
-module.exports = {
-  bindHooks,
-  useState,
-  useEffect,
-};

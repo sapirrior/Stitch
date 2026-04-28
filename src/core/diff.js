@@ -1,7 +1,7 @@
 'use strict';
 
-const { moveCursor, sgr } = require('../driver/ansi');
-const { CHAR_MASK, FG_MASK, BG_MASK, ATTR_MASK, FG_SHIFT, BG_SHIFT, ATTR_SHIFT } = require('../vram/bitmask');
+import { moveCursor, sgr } from '../driver/ansi.js';
+import { CHAR_MASK, FG_MASK, BG_MASK, ATTR_MASK, FG_SHIFT, BG_SHIFT, ATTR_SHIFT } from '../vram/bitmask.js';
 
 /**
  * Optimized cell-matrix diffing engine using Symmetric Difference (Bitwise XOR).
@@ -74,4 +74,4 @@ function diff(vram, driver) {
   }
 }
 
-module.exports = diff;
+export default diff;

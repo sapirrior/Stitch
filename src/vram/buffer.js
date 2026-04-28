@@ -1,7 +1,7 @@
 'use strict';
 
-const { pack } = require('./bitmask');
-const { compose } = require('./composer');
+import { pack } from './bitmask.js';
+import { compose } from './composer.js';
 
 /**
  * VRAM manages dual buffers for terminal cell data.
@@ -96,4 +96,4 @@ class VRAM {
   }
 }
 
-module.exports = VRAM;
+export default VRAM;

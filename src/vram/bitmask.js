@@ -50,7 +50,7 @@ function unpack(val) {
   };
 }
 
-module.exports = {
+export {
   pack,
   unpack,
   CHAR_MASK,

@@ -9,7 +9,7 @@
  * @param {number[]} ratios - Array of integer weight coefficients.
  * @returns {Int32Array} - Array of segment sizes.
  */
-function split(totalSize, ratios) {
+export function split(totalSize, ratios) {
   const len = ratios.length;
   const size = totalSize | 0;
   const result = new Int32Array(len);
@@ -37,7 +37,3 @@ function split(totalSize, ratios) {
 
   return result;
 }
-
-module.exports = {
-  split,
-};

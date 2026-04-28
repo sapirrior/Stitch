@@ -11,7 +11,7 @@
  * @param {number} containerSize 
  * @returns {number}
  */
-function center(itemSize, containerSize) {
+export function center(itemSize, containerSize) {
   return (((containerSize | 0) - (itemSize | 0)) / 2) | 0;
 }
 
@@ -21,7 +21,7 @@ function center(itemSize, containerSize) {
  * @param {number} containerSize 
  * @returns {number}
  */
-function alignEnd(itemSize, containerSize) {
+export function alignEnd(itemSize, containerSize) {
   return ((containerSize | 0) - (itemSize | 0)) | 0;
 }
 
@@ -32,7 +32,7 @@ function alignEnd(itemSize, containerSize) {
  * @param {number} max 
  * @returns {number}
  */
-function clamp(val, min, max) {
+export function clamp(val, min, max) {
   const v = val | 0;
   const mi = min | 0;
   const ma = max | 0;
@@ -40,9 +40,3 @@ function clamp(val, min, max) {
   if (v > ma) return ma;
   return v;
 }
-
-module.exports = {
-  center,
-  alignEnd,
-  clamp,
-};

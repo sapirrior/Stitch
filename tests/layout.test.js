@@ -1,10 +1,10 @@
 'use strict';
 
-const test = require('node:test');
-const assert = require('node:assert');
-const { center, alignEnd, clamp } = require('../src/layout/compute');
-const { split } = require('../src/layout/ilp');
-const { Rect } = require('../src/layout/constraints');
+import test from 'node:test';
+import assert from 'node:assert';
+import { center, alignEnd, clamp } from '../src/layout/compute.js';
+import { split } from '../src/layout/ilp.js';
+import { Rect } from '../src/layout/constraints.js';
 
 test('layout compute - center', () => {
   assert.strictEqual(center(10, 100), 45);
