@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Layout constraints and box model utilities for libstitch.
+ * Layout constraints and box model utilities for Stitch.
  */
 
 export class Rect {

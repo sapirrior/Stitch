@@ -1,9 +1,9 @@
-# libstitch
+# Stitch
 
 A high-performance, modular, terminal-native UI engine built for the grid.
 
 ## Core Philosophy
-libstitch is designed purely for the 2D integer grid of the terminal. It eschews document-tree models (like React) in favor of a lean, immediate-mode architecture optimized for the V8 JIT compiler.
+Stitch is designed purely for the 2D integer grid of the terminal. It eschews document-tree models (like React) in favor of a lean, immediate-mode architecture optimized for the V8 JIT compiler.
 
 ## Features
 - **Immediate Mode API:** Simple "paint" model for UI development.

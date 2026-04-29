@@ -1,4 +1,4 @@
-# Contributing to libstitch
+# Contributing to Stitch
 
 ## Engineering Standards
 

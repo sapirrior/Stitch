@@ -1,5 +1,5 @@
 {
-  "name": "libstitch",
+  "name": "stitch",
   "version": "1.0.0",
   "description": "",
   "main": "./src/stitch.js",

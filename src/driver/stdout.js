@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Buffered output driver for libstitch.
+ * Buffered output driver for Stitch.
  * Minimizes process.stdout.write calls by batching strings.
  * Uses Array.join('') to avoid Cons String flattening overhead.
  */

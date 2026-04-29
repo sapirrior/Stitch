@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Integer-based layout computation for libstitch.
+ * Integer-based layout computation for Stitch.
  * All functions are pure mathematical functions using 32-bit integer math.
  */
 

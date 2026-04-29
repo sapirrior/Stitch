@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * libstitch bitmasking utilities for cell data.
+ * Stitch bitmasking utilities for cell data.
  * 
  * Cell Bit Layout (32 bits):
  * 00-20: Unicode Codepoint (21 bits)

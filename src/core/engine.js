@@ -9,7 +9,7 @@ import Reconciler from '../kernel/reconciler.js';
 import { bindHooks } from '../kernel/hooks.js';
 
 /**
- * libstitch Engine Orchestrator.
+ * Stitch Engine Orchestrator.
  */
 class Engine {
   constructor() {
