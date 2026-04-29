@@ -23,6 +23,8 @@ class Engine {
     bindHooks(this.reconciler);
 
     this._boundResize = this._onResize.bind(this);
+    this._boundExit = this._onExit.bind(this);
+    this._boundException = this._onException.bind(this);
   }
 
   /**
@@ -33,6 +35,9 @@ class Engine {
     this.driver.write(CLEAR_SCREEN);
     this.driver.flush();
     process.stdout.on('resize', this._boundResize);
+    process.on('SIGINT', this._boundExit);
+    process.on('SIGTERM', this._boundExit);
+    process.on('uncaughtException', this._boundException);
   }
 
   /**
@@ -44,6 +49,9 @@ class Engine {
     this.driver.write(CLEAR_SCREEN);
     this.driver.flush();
     process.stdout.removeListener('resize', this._boundResize);
+    process.removeListener('SIGINT', this._boundExit);
+    process.removeListener('SIGTERM', this._boundExit);
+    process.removeListener('uncaughtException', this._boundException);
   }
 
   /**
@@ -55,6 +63,26 @@ class Engine {
     this.height = process.stdout.rows || 24;
     this.vram.resize(this.width, this.height);
     this.driver.write(CLEAR_SCREEN);
+  }
+
+  /**
+   * Handles process exit signals.
+   * @private
+   */
+  _onExit() {
+    this.stop();
+    process.exit(0);
+  }
+
+  /**
+   * Handles uncaught exceptions.
+   * @private
+   * @param {Error} err
+   */
+  _onException(err) {
+    this.stop();
+    console.error(err);
+    process.exit(1);
   }
 
   /**

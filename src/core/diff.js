@@ -49,7 +49,9 @@ function diff(vram, driver) {
           }
 
           // Write character
-          if (char < 128) {
+          if (char === 0) {
+            driver.write(' ');
+          } else if (char < 128) {
             driver.write(String.fromCharCode(char));
           } else {
             driver.write(String.fromCodePoint(char));

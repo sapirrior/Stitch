@@ -47,3 +47,14 @@ test('diffing logic - partial update', () => {
   assert.strictEqual(driver.output.includes('A'), false); // A should not be re-written
   assert.match(driver.output, /B/);
 });
+
+test('diffing logic - empty cell as space', () => {
+  const vram = new VRAM(10, 1);
+  const driver = new MockDriver();
+
+  vram.setCell(0, 0, 0, 7, 0, 0); // Empty cell
+  diff(vram, driver);
+
+  assert.strictEqual(driver.output.includes(' '), true);
+  assert.strictEqual(driver.output.includes('\0'), false);
+});

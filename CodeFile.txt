@@ -1,7 +1,7 @@
 ROOT_NAME libstitch
-CREATED_UTC 2026-04-28T16:12:34Z
+CREATED_UTC 2026-04-29T02:07:45Z
 TOTAL_SOURCE_MB 0.04
-FILE_COUNT 28
+FILE_COUNT 27
 
 START_STRUCTURE
 libstitch/
@@ -37,7 +37,6 @@ libstitch/
 |   \-- vram.test.js
 |-- .gitignore
 |-- CONTRIBUTING.md
-|-- hello.js
 |-- package.json
 \-- README.md
 END_STRUCTURE
@@ -139,118 +138,12 @@ Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for engineering standards.
 
 FILE_END README.md 208466a77577
 
-FILE_START hello.js d92a9ca3148b
-'use strict';
-
-import Engine, { 
-  center, 
-  split, 
-  Rect, 
-  VRAM, 
-  pack,
-  ansi
-} from './src/stitch.js';
-
-const engine = new Engine();
-engine.start();
-
-// Layering: Background (Stars), Content (Window), HUD (Top)
-const starLayer = new VRAM(engine.width, engine.height);
-const winLayer = new VRAM(engine.width, engine.height);
-const hudLayer = new VRAM(engine.width, engine.height);
-
-const stars = Array.from({ length: 100 }, () => ({
-  x: Math.random() * engine.width,
-  y: Math.random() * engine.height,
-  v: 0.1 + Math.random() * 0.5,
-  char: Math.random() > 0.8 ? 42 : 46 // * or .
-}));
-
-let frame = 0;
-let winX = 10;
-let winY = 5;
-let dx = 0.8;
-let dy = 0.4;
-
-const startTime = Date.now();
-
-const interval = setInterval(() => {
-  frame++;
-  
-  // 1. Update Physics
-  winX += dx;
-  winY += dy;
-  if (winX <= 0 || winX + 30 >= engine.width) dx *= -1;
-  if (winY <= 0 || winY + 10 >= engine.height) dy *= -1;
-
-  engine.render((mainVram) => {
-    // --- Star Layer ---
-    starLayer.clear(0);
-    for (const s of stars) {
-      s.x = (s.x + s.v) % engine.width;
-      starLayer.setCell(s.x | 0, s.y | 0, s.char, 8, 0, 0); // Dim Grey
-    }
-
-    // --- Window Layer ---
-    winLayer.clear(0);
-    const wx = winX | 0;
-    const wy = winY | 0;
-    const ww = 30;
-    const wh = 10;
-    
-    // Draw Box (Box-drawing characters)
-    for (let y = 0; y < wh; y++) {
-      for (let x = 0; x < ww; x++) {
-        let char = 32;
-        if (y === 0 && x === 0) char = 9484; // ┌
-        else if (y === 0 && x === ww - 1) char = 9488; // ┐
-        else if (y === wh - 1 && x === 0) char = 9492; // └
-        else if (y === wh - 1 && x === ww - 1) char = 9496; // ┘
-        else if (y === 0 || y === wh - 1) char = 9472; // ─
-        else if (x === 0 || x === ww - 1) char = 9474; // │
-        
-        winLayer.setCell(wx + x, wy + y, char, ((frame / 10) | 0) % 7 + 1, 0, 1);
-      }
-    }
-    const title = " libstitch-v1 ";
-    for(let i=0; i<title.length; i++) {
-        winLayer.setCell(wx + 2 + i, wy, title.charCodeAt(i), 7, 0, 1);
-    }
-    const content = "Performance Engine";
-    for(let i=0; i<content.length; i++) {
-        winLayer.setCell(wx + 5 + i, wy + 4, content.charCodeAt(i), 6, 0, 0);
-    }
-
-    // --- HUD Layer ---
-    hudLayer.clear(0);
-    const elapsed = (Date.now() - startTime) / 1000;
-    const fps = (frame / elapsed).toFixed(1);
-    const stats = ` FPS: ${fps} | FRAME: ${frame} | RES: ${engine.width}x${engine.height} `;
-    
-    for (let i = 0; i < stats.length; i++) {
-      hudLayer.setCell(i, 0, stats.charCodeAt(i), 0, 7, 0); // Black on White
-    }
-
-    // --- Final Composition ---
-    mainVram.compose([starLayer, winLayer, hudLayer]);
-  });
-
-  if (frame > 300) {
-    clearInterval(interval);
-    engine.stop();
-    console.log(`\nDemo completed. Average FPS: ${(frame / ((Date.now() - startTime) / 1000)).toFixed(1)}`);
-    process.exit(0);
-  }
-}, 16); // ~60 FPS
-
-FILE_END hello.js d92a9ca3148b
-
-FILE_START package.json 6f22a8997cc5
+FILE_START package.json 4265fabe8064
 {
   "name": "libstitch",
   "version": "1.0.0",
   "description": "",
-  "main": "src/stitch.js",
+  "main": "./src/stitch.js",
   "exports": {
     ".": "./src/stitch.js"
   },
@@ -263,9 +156,9 @@ FILE_START package.json 6f22a8997cc5
   "type": "module"
 }
 
-FILE_END package.json 6f22a8997cc5
+FILE_END package.json 4265fabe8064
 
-FILE_START src/core/diff.js d1bc58f4eff2
+FILE_START src/core/diff.js aab8c2bceffc
 'use strict';
 
 import { moveCursor, sgr } from '../driver/ansi.js';
@@ -317,7 +210,9 @@ function diff(vram, driver) {
           }
 
           // Write character
-          if (char < 128) {
+          if (char === 0) {
+            driver.write(' ');
+          } else if (char < 128) {
             driver.write(String.fromCharCode(char));
           } else {
             driver.write(String.fromCodePoint(char));
@@ -344,9 +239,9 @@ function diff(vram, driver) {
 
 export default diff;
 
-FILE_END src/core/diff.js d1bc58f4eff2
+FILE_END src/core/diff.js aab8c2bceffc
 
-FILE_START src/core/engine.js 1a7488b45ca9
+FILE_START src/core/engine.js ce6f0ae623e0
 'use strict';
 
 import VRAM from '../vram/buffer.js';
@@ -372,6 +267,8 @@ class Engine {
     bindHooks(this.reconciler);
 
     this._boundResize = this._onResize.bind(this);
+    this._boundExit = this._onExit.bind(this);
+    this._boundException = this._onException.bind(this);
   }
 
   /**
@@ -382,6 +279,9 @@ class Engine {
     this.driver.write(CLEAR_SCREEN);
     this.driver.flush();
     process.stdout.on('resize', this._boundResize);
+    process.on('SIGINT', this._boundExit);
+    process.on('SIGTERM', this._boundExit);
+    process.on('uncaughtException', this._boundException);
   }
 
   /**
@@ -393,6 +293,9 @@ class Engine {
     this.driver.write(CLEAR_SCREEN);
     this.driver.flush();
     process.stdout.removeListener('resize', this._boundResize);
+    process.removeListener('SIGINT', this._boundExit);
+    process.removeListener('SIGTERM', this._boundExit);
+    process.removeListener('uncaughtException', this._boundException);
   }
 
   /**
@@ -404,6 +307,26 @@ class Engine {
     this.height = process.stdout.rows || 24;
     this.vram.resize(this.width, this.height);
     this.driver.write(CLEAR_SCREEN);
+  }
+
+  /**
+   * Handles process exit signals.
+   * @private
+   */
+  _onExit() {
+    this.stop();
+    process.exit(0);
+  }
+
+  /**
+   * Handles uncaught exceptions.
+   * @private
+   * @param {Error} err
+   */
+  _onException(err) {
+    this.stop();
+    console.error(err);
+    process.exit(1);
   }
 
   /**
@@ -426,7 +349,7 @@ class Engine {
 
 export default Engine;
 
-FILE_END src/core/engine.js 1a7488b45ca9
+FILE_END src/core/engine.js ce6f0ae623e0
 
 FILE_START src/driver/ansi.js 879c3955d1a2
 'use strict';
@@ -1255,7 +1178,7 @@ export {
 
 FILE_END src/vram/composer.js 63c5d8edfd6a
 
-FILE_START tests/core.test.js 5aad2e7090f1
+FILE_START tests/core.test.js 7e17268186a5
 'use strict';
 
 import test from 'node:test';
@@ -1306,7 +1229,18 @@ test('diffing logic - partial update', () => {
   assert.match(driver.output, /B/);
 });
 
-FILE_END tests/core.test.js 5aad2e7090f1
+test('diffing logic - empty cell as space', () => {
+  const vram = new VRAM(10, 1);
+  const driver = new MockDriver();
+
+  vram.setCell(0, 0, 0, 7, 0, 0); // Empty cell
+  diff(vram, driver);
+
+  assert.strictEqual(driver.output.includes(' '), true);
+  assert.strictEqual(driver.output.includes('\0'), false);
+});
+
+FILE_END tests/core.test.js 7e17268186a5
 
 FILE_START tests/driver.test.js 1bfce94e0fc2
 'use strict';
