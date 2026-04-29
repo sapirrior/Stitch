@@ -18,15 +18,24 @@ Stitch is designed for the terminal grid. It utilizes an immediate-mode architec
 - `src/core/`: Engine orchestration and diffing algorithms.
 - `src/layout/`: Integer-based layout and constraint utilities.
 
-## Usage
+## Installation
+
+Install the engine directly from the source repository:
+
+```bash
+npm install github:StitchNative/Stitch
+```
+
+## Quick Start
 
 ```javascript
-import { Engine } from './src/stitch.js';
+import { Engine, VRAM } from 'stitch';
 
 const engine = new Engine();
 engine.start();
 
 engine.render((vram) => {
+  // 'vram' is an instance of VRAM passed by the engine to the callback
   // Draw an 'A' at (10, 5) with Red Foreground (1)
   vram.setCell(10, 5, 65, 1, 0, 0);
   
