@@ -17,8 +17,9 @@ class StdoutDriver {
    * @param {string} str 
    */
   write(str) {
-    this.buffer.push(str);
-    this.length += str.length;
+    const s = String(str);
+    this.buffer.push(s);
+    this.length = (this.length + s.length) | 0;
     // Auto-flush if buffer gets too large (e.g., 16KB)
     if (this.length > 16384) {
       this.flush();

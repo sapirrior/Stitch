@@ -36,6 +36,6 @@ for (let fg = 0; fg < 16; fg++) {
  * @returns {string}
  */
 export function sgr(fg, bg, attr) {
-  const index = (fg << 7) | (bg << 3) | attr;
+  const index = ((fg & 0xF) << 7) | ((bg & 0xF) << 3) | (attr & 0x7);
   return SGR_TABLE[index];
 }

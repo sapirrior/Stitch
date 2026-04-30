@@ -14,7 +14,7 @@ const CURSOR_CACHE = new Array(256 * 256);
 export function moveCursor(x, y) {
   const ix = x | 0;
   const iy = y | 0;
-  if (ix < 256 && iy < 256) {
+  if (ix >= 0 && ix < 256 && iy >= 0 && iy < 256) {
     const index = (iy << 8) | ix;
     let cached = CURSOR_CACHE[index];
     if (cached === undefined) {

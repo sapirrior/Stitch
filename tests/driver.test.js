@@ -7,16 +7,22 @@ import { moveCursor, sgr, RESET } from '../src/driver/ansi.js';
 test('moveCursor sequence', () => {
   assert.strictEqual(moveCursor(0, 0), '\x1b[1;1H');
   assert.strictEqual(moveCursor(10, 5), '\x1b[6;11H');
+  // Stability: Negative bounds should bypass cache and return valid (though clipped) sequence
+  assert.strictEqual(moveCursor(-1, -1), '\x1b[0;0H');
 });
 
 test('sgr sequence', () => {
   // FG 1 (Red), BG 0 (Black), Attr 1 (Bold)
-  // Expected: \x1b[0;1;31;40m
   assert.strictEqual(sgr(1, 0, 1), '\x1b[0;1;31;40m');
 
   // Bright FG 10 (Bright Green), Bright BG 12 (Bright Blue), No Attr
-  // Expected: \x1b[0;92;104m
   assert.strictEqual(sgr(10, 12, 0), '\x1b[0;92;104m');
+
+  // Stability: Out-of-range masking
+  // 17 & 0xF = 1 (Red)
+  // 16 & 0xF = 0 (Black)
+  // 9 & 0x7 = 1 (Bold)
+  assert.strictEqual(sgr(17, 16, 9), '\x1b[0;1;31;40m');
 });
 
 test('RESET constant', () => {
@@ -40,6 +46,22 @@ test('StdoutDriver buffering', () => {
   assert.strictEqual(mockStream.content, ''); // Should be buffered
   driver.flush();
   assert.strictEqual(mockStream.content, 'hello world');
+});
+
+test('StdoutDriver stability: non-string input', () => {
+  const mockStream = {
+    content: '',
+    write(str) { this.content += str; }
+  };
+  const driver = new StdoutDriver();
+  driver.stream = mockStream;
+
+  driver.write(123);
+  driver.write(true);
+  assert.strictEqual(driver.length, 7);
+  driver.flush();
+  
+  assert.strictEqual(mockStream.content, '123true');
 });
 
 test('StdoutDriver auto-flush', () => {
