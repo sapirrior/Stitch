@@ -1,22 +1,29 @@
 # Stitch
 
-A modular, terminal-native UI engine built for the 2D integer grid.
+A terminal-native UI engine built for the 2D integer grid. 
+
+Stitch provides a hooks-based immediate-mode API for the terminal. It utilizes bit-packed memory and strict zero-allocation hot paths to operate within the constraints of the V8 JIT compiler.
 
 ## Core Philosophy
-Stitch is designed for the terminal grid. It utilizes an immediate-mode architecture and bit-packed memory to operate within the constraints of the V8 JIT compiler.
+
+- **Zero Allocations:** The render and diffing loops are designed to avoid object creation, minimizing Garbage Collection (GC) overhead during screen updates.
+- **Bit-Packed Memory:** Terminal cells are packed into single 32-bit integers (`Uint32Array`), storing the Unicode character, foreground color, background color, and styling attributes.
+- **Integer-Only Math:** All layout and rendering operations use strict 32-bit integer math and Integer Linear Programming (ILP) concepts to maintain V8's SMI fast path and prevent floating-point rounding errors.
 
 ## Features
+
 - **Immediate Mode API:** Procedural "paint" model for UI development.
-- **VRAM Buffer Diffing:** Cell-matrix diffing to minimize TTY I/O.
-- **Bit-Packed Memory:** Uses `Uint32Array` to store character codes, colors, and styles in single 32-bit integers.
-- **Zero Allocations:** Hot paths avoid object creation to reduce garbage collection overhead.
-- **Strict Integer Math:** Layout and rendering logic uses 32-bit integer calculations.
+- **Persistent State (Hooks):** Includes a Reconciler and Memory Arena to support state management (`useState`, `useEffect`) within the immediate-mode loop.
+- **XOR Diffing:** Cell-matrix diffing ensures only changed characters are sent to the terminal, minimizing I/O overhead.
+- **Pre-calculated Caching:** Uses static lookup tables (e.g., a 2048-entry SGR styling table) and caches to avoid string concatenations in hot paths.
 
 ## Architecture
-- `src/vram/`: Dual-buffer grid management and bit-packing logic.
+
+- `src/kernel/`: Manages component identity and state via an Arena and Reconciler.
+- `src/core/`: The main engine orchestrator and XOR-based symmetric difference algorithm.
+- `src/vram/`: Dual-buffer grid management, Top-to-Bottom layer composition, and bitmasking logic.
+- `src/layout/`: Integer-based proportional splitting and constraint utilities.
 - `src/driver/`: ANSI escape sequence generation and buffered stdout communication.
-- `src/core/`: Engine orchestration and diffing algorithms.
-- `src/layout/`: Integer-based layout and constraint utilities.
 
 ## Installation
 
@@ -35,8 +42,7 @@ const engine = new Engine();
 engine.start();
 
 engine.render((vram) => {
-  // 'vram' is an instance of VRAM passed by the engine to the callback
-  // Draw an 'A' at (10, 5) with Red Foreground (1)
+  // Draw an 'A' at (10, 5) with Red Foreground
   vram.setCell(10, 5, 65, 1, 0, 0);
   
   // Draw a horizontal line
@@ -44,8 +50,6 @@ engine.render((vram) => {
     vram.setCell(x, 0, 45, 7, 0, 0);
   }
 });
-
-// engine.stop() to restore terminal state
 ```
 
 ## Development
