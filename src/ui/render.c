@@ -66,7 +66,34 @@ static void editorDrawRows(struct abuf *ab) {
             int len = E.lines[filerow].rsize - E.col_off;
             if (len < 0) len = 0;
             if (len > E.screen_cols) len = E.screen_cols;
-            abAppend(ab, &E.lines[filerow].render[E.col_off], len);
+
+            if (E.search_query && len > 0) {
+                char *line = &E.lines[filerow].render[E.col_off];
+                int query_len = (int)strlen(E.search_query);
+                int current_idx = 0;
+
+                while (current_idx < len) {
+                    char *match = editorStrcasestr(&line[current_idx], E.search_query);
+                    if (match && (match - line) < len) {
+                        int match_idx = (int)(match - line);
+                        /* Append text before match */
+                        abAppend(ab, &line[current_idx], match_idx - current_idx);
+                        /* Append highlighted match */
+                        abAppend(ab, STITCH_BG_OCHRE, (int)strlen(STITCH_BG_OCHRE));
+                        abAppend(ab, STITCH_FG_EARTH, (int)strlen(STITCH_FG_EARTH));
+                        abAppend(ab, match, query_len);
+                        abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
+                        abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
+                        current_idx = match_idx + query_len;
+                    } else {
+                        /* Append remaining text */
+                        abAppend(ab, &line[current_idx], len - current_idx);
+                        break;
+                    }
+                }
+            } else {
+                abAppend(ab, &E.lines[filerow].render[E.col_off], len);
+            }
         }
 
         abAppend(ab, "\x1b[K", 3);

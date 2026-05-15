@@ -168,3 +168,17 @@ char *editorStrdup(const char *s) {
     if (!p) die("strdup");
     return p;
 }
+
+char *editorStrcasestr(const char *haystack, const char *needle) {
+    if (!*needle) return (char *)haystack;
+    for (; *haystack; haystack++) {
+        if (toupper((unsigned char)*haystack) == toupper((unsigned char)*needle)) {
+            const char *h, *n;
+            for (h = haystack, n = needle; *h && *n; h++, n++) {
+                if (toupper((unsigned char)*h) != toupper((unsigned char)*n)) break;
+            }
+            if (!*n) return (char *)haystack;
+        }
+    }
+    return NULL;
+}

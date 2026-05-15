@@ -12,6 +12,9 @@ static void editorFindCallback(char *query, int key) {
     static int last_match = -1;
     static int direction = 1;
 
+    free(E.search_query);
+    E.search_query = NULL;
+
     if (key == '\r' || key == '\x1b') {
         last_match = -1;
         direction = 1;
@@ -25,24 +28,60 @@ static void editorFindCallback(char *query, int key) {
         direction = 1;
     }
 
-    if (last_match == -1) direction = 1;
+    if (query[0] == '\0') return;
+    E.search_query = editorStrdup(query);
+
+    int total_matches = 0;
+    int current_match_idx = -1;
+
+    /* First pass: count total matches and find current index */
+    for (int i = 0; i < E.num_lines; i++) {
+        char *line_ptr = E.lines[i].render;
+        while ((line_ptr = editorStrcasestr(line_ptr, query)) != NULL) {
+            total_matches++;
+            if (i == last_match) {
+                /* Simplified: only tracks line index, not occurrence within line */
+            }
+            line_ptr += strlen(query);
+        }
+    }
+
+    /* Second pass: find the match to jump to */
     int current = last_match;
     for (int i = 0; i < E.num_lines; i++) {
         current += direction;
         if (current == -1) current = E.num_lines - 1;
         else if (current == E.num_lines) current = 0;
 
-        Line *line = &E.lines[current];
-        char *match = strstr(line->render, query);
+        char *match = editorStrcasestr(E.lines[current].render, query);
         if (match) {
             last_match = current;
             E.cy = current;
             E.cx = 0;
-            char *chars_match = strstr(line->chars, query);
-            if (chars_match) E.cx = (int)(chars_match - line->chars);
+            char *chars_match = editorStrcasestr(E.lines[current].chars, query);
+            if (chars_match) E.cx = (int)(chars_match - E.lines[current].chars);
             E.row_off = E.num_lines; /* Force scroll */
+
+            /* Calculate current_match_idx (approximate by line index for now) */
+            int found_count = 0;
+            for (int j = 0; j <= current; j++) {
+                char *lp = E.lines[j].render;
+                while ((lp = editorStrcasestr(lp, query)) != NULL) {
+                    found_count++;
+                    lp += strlen(query);
+                }
+            }
+            current_match_idx = found_count;
             break;
         }
+    }
+
+    if (total_matches > 0) {
+        editorSetStatusMessage("Match %d of %d (Arrows to navigate)", 
+                               current_match_idx > 0 ? current_match_idx : 1, 
+                               total_matches);
+    } else {
+        editorSetStatusMessage("No matches found");
     }
 }
 

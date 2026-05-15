@@ -24,6 +24,7 @@ void initEditor(void) {
     E.shell_pid = -1;
     E.history_count = 0;
     for (int i = 0; i < 10; i++) E.history[i] = NULL;
+    E.search_query = NULL;
 
     if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) {
         if (isatty(STDOUT_FILENO)) die("getWindowSize");

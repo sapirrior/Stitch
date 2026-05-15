@@ -63,6 +63,9 @@ typedef struct {
     /* Command History */
     char *history[10];
     int history_count;
+
+    /* Search */
+    char *search_query;
 } EditorConfig;
 
 extern EditorConfig E;
