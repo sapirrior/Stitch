@@ -1,18 +1,16 @@
 #ifndef STITCH_TERMINAL_H
 #define STITCH_TERMINAL_H
 
-#include "../types.h"
+#include "stitch/types.h"
 
-void die(const char *s);
-void enableRawMode(void);
-void disableRawMode(void);
-int getWindowSize(int *rows, int *cols);
-int editorReadKey(void);
+void core_die(const char *s);
+void core_enable_raw_mode(StitchState *state);
+void core_disable_raw_mode(void);
+int core_get_window_size(int *rows, int *cols);
+int core_read_key(StitchState *state);
+int core_is_utf8_start(unsigned char c);
 
-/* Robust I/O */
-void writeAll(int fd, const char *buf, size_t len);
-
-/* UTF-8 Utilities */
+/* Compat / Shared Utils */
 int editorIsUtf8Start(unsigned char c);
 int editorRowByteToCol(const char *s, int len, int target_byte);
 int editorRowColToByte(const char *s, int len, int target_col);

@@ -1,25 +1,37 @@
 # Stitch: Minimalist Modal Editor
 
-Stitch is a C11 modal text editor that combines Nano's clean bottom-bar aesthetic with Vim's modal efficiency. It follows a strictly modular, domain-driven architecture to ensure maintainability and clarity.
+Stitch is a C11 modal text editor that combines Nano's clean bottom-bar aesthetic with Vim's modal efficiency. It follows a strictly modular, component-based architecture to ensure industry-standard maintainability and scalability.
 
 ## Architecture
 
-The codebase is organized into four primary domains:
+The codebase is organized into four primary domains, each following a **Handler-Component** pattern:
 
-- **Core (`src/core/`, `include/stitch/core/`)**: Manages the terminal state using `ncursesw`. Handles raw mode, input normalization, and coordinate-safe key mapping.
-- **Buffer (`src/buffer/`, `include/stitch/buffer/`)**: Manages the internal representation of the text. `engine.c` handles line storage and modification, while `io.c` manages atomic file operations.
-- **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering the editor state using `ncurses` windows and color pairs. Includes the inverted status bar and interactive prompt system.
-- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements the modal logic (Normal, Insert, Command), key dispatching, and the internal command parser. Supports shell execution via `:! <command>`.
+- **Core (`src/core/`, `include/stitch/core/`)**: Manages system-level terminal state and memory. Handlers coordinate low-level `ncursesw` initialization and input normalization.
+- **Buffer (`src/buffer/`, `include/stitch/buffer/`)**: Manages text data and file I/O. Uses isolated operations for line manipulation, insertion, and deletion.
+- **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering using isolated components (Status Bar, Message Bar, Text Grid). Uses `wnoutrefresh()` and `doupdate()` for efficient screen synchronization.
+- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements modal logic and command execution. Each command and mode is isolated into its own component file.
+
+## Technical Standards
+
+### Context Injection
+Stitch avoids global state. All application data is encapsulated in a unified `StitchState` context, which is instantiated in `main.c` and passed by pointer to all handlers.
+
+### Deep Modularization
+Every specific behavior is isolated to its own file within dedicated subdirectories:
+- `src/editor/commands/`: Individual command implementations (save, quit, search).
+- `src/editor/modes/`: Modal behavior (Normal, Insert, Command).
+- `src/ui/components/`: Modular UI widgets.
+- `src/buffer/operations/`: Atomic buffer manipulations.
 
 ## Building and Running
 
 ### Build Requirements
 - GCC or Clang with C11 support.
 - POSIX-compliant environment.
-- **ncursesw** library (wide-character support).
+- **ncursesw** library.
 
 ### Commands
-- **Build**: `make`
+- **Build**: `make` (Recursively compiles all modular components)
 - **Run**: `./build/stitch [filename]`
 - **Clean**: `make clean`
 
@@ -27,19 +39,10 @@ The codebase is organized into four primary domains:
 
 ### Standards
 - **Language**: Strict C11 (`-std=c11`).
-- **Portability**: Target POSIX.1-2008 (`-D_POSIX_C_SOURCE=200809L`) and X/Open Extended for ncurses support.
-- **Error Handling**: Use `die()` for fatal failures. All interactive components must implement defensive null-checks and bounds-checking to prevent segmentation faults.
+- **Portability**: Target POSIX.1-2008 and X/Open Extended.
+- **Naming**: Strict domain-based prefixing (e.g., `ui_`, `buffer_`, `core_`, `cmd_`).
 
 ### UI & Aesthetics
-- **Organic Warmth Palette**: Uses soft tones: Sage (Normal), Terracotta (Insert), and Ochre (Command).
-- **Background**: Default editor uses a standard Black background for clarity.
-- **Status Bar**: Uses a neutral Deep Earth background with high-contrast, color-coded "Mode Blocks" (Sage/Terra/Ochre).
-- **Command Line**: The very bottom row remains visually neutral with no background colors.
-
-### Technical Patterns
-- **Memory Safety**: All allocations must use `editorMalloc`, `editorRealloc`, or `editorStrdup`.
-- **Key Normalization**: All input is normalized in `editorReadKey` (e.g., mapping `\r`, `\n`, and `KEY_ENTER` to `\r`) to ensure consistent behavior across different terminal emulators.
-- **Resize Handling**: Delegated to `ncurses`' internal detection. `getch()` returns `STITCH_KEY_RESIZE`, triggering a full screen invalidation via `clear()` and `touchwin()`.
-- **Rendering**: Uses efficient screen synchronization via `wnoutrefresh()` and `doupdate()`.
-- **Atomic Saving**: Files are saved using a "write-then-rename" strategy (writing to `.filename.tmp` first) to prevent data loss.
-- **Background Shell Execution**: Uses `fork()` and `waitpid(..., WNOHANG)` to execute shell commands silently in the background.
+- **Organic Warmth Palette**: Sage (Normal), Terracotta (Insert), Ochre (Command).
+- **Background**: Standard Black background for the text grid; Deep Earth background for the status bar.
+- **Clean Interface**: No tildes or EOF indicators.

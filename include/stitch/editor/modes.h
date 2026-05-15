@@ -1,9 +1,8 @@
 #ifndef STITCH_EDITOR_MODES_H
 #define STITCH_EDITOR_MODES_H
 
-#include "../types.h"
+#include "stitch/types.h"
 
-void editorProcessKeypress(void);
-void editorMoveCursor(int key);
+void editor_process_keypress(StitchState *state);
 
 #endif

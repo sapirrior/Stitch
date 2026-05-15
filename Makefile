@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -std=c11 -Iinclude -D_XOPEN_SOURCE_EXTENDED
+CFLAGS = -Wall -Wextra -pedantic -std=c11 -Iinclude -Isrc/core -Isrc/buffer -Isrc/ui -Isrc/editor -D_XOPEN_SOURCE_EXTENDED
 SRC_DIR = src
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/objs

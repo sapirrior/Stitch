@@ -1,9 +1,9 @@
 #ifndef STITCH_BUFFER_IO_H
 #define STITCH_BUFFER_IO_H
 
-#include "../types.h"
+#include "stitch/types.h"
 
-int editorOpen(char *filename);
-void editorSave(void);
+void editorSave(StitchState *state);
+int editorOpen(StitchState *state, char *filename);
 
 #endif

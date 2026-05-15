@@ -1,9 +1,8 @@
 #ifndef STITCH_UI_PROMPT_H
 #define STITCH_UI_PROMPT_H
 
-#include "../types.h"
+#include "stitch/types.h"
 
-void editorSetStatusMessage(const char *fmt, ...);
-char *editorPrompt(char *prompt, void (*callback)(char *, int));
+char *ui_prompt(StitchState *state, char *prompt, void (*callback)(StitchState *, char *, int));
 
 #endif

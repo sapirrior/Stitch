@@ -1,0 +1,107 @@
+#include <stdlib.h>
+#include "stitch/types.h"
+#include "stitch/buffer/engine.h"
+#include "stitch/ui/render.h"
+#include "stitch/ui/prompt.h"
+#include "../editor_internal.h"
+
+void handle_normal_mode(StitchState *state, int c) {
+    if (state->editor.last_key == 'd') {
+        if (c == 'd') {
+            buffer_del_line(&state->buffer, state->view.cy);
+            if (state->view.cy == state->buffer.num_lines && state->view.cy > 0) state->view.cy--;
+            state->view.cx = 0;
+        }
+        state->editor.last_key = 0;
+        return;
+    }
+
+    switch (c) {
+        case 'i':
+            state->editor.mode = MODE_INSERT;
+            ui_set_status_message(state, "-- INSERT --");
+            break;
+        case 'a':
+            if (state->view.cy < state->buffer.num_lines) {
+                Line *line = &state->buffer.lines[state->view.cy];
+                if (state->view.cx < line->size) state->view.cx++;
+            }
+            state->editor.mode = MODE_INSERT;
+            ui_set_status_message(state, "-- INSERT --");
+            break;
+        case 'A':
+            if (state->view.cy < state->buffer.num_lines) state->view.cx = state->buffer.lines[state->view.cy].size;
+            state->editor.mode = MODE_INSERT;
+            ui_set_status_message(state, "-- INSERT --");
+            break;
+        case 'o':
+            state->view.cy++;
+            buffer_insert_line(&state->buffer, state->view.cy, "", 0);
+            state->view.cx = 0;
+            state->editor.mode = MODE_INSERT;
+            ui_set_status_message(state, "-- INSERT --");
+            break;
+        case 'O':
+            buffer_insert_line(&state->buffer, state->view.cy, "", 0);
+            state->view.cx = 0;
+            state->editor.mode = MODE_INSERT;
+            ui_set_status_message(state, "-- INSERT --");
+            break;
+        case ':':
+            state->editor.mode = MODE_COMMAND;
+            handle_command_prompt_mode(state, c);
+            break;
+        case '/':
+            cmd_search_execute(state);
+            break;
+        case 'h':
+        case 'j':
+        case 'k':
+        case 'l':
+        case STITCH_ARROW_UP:
+        case STITCH_ARROW_DOWN:
+        case STITCH_ARROW_LEFT:
+        case STITCH_ARROW_RIGHT:
+            editor_move_cursor(state, c);
+            break;
+        case '0':
+        case STITCH_HOME_KEY:
+            state->view.cx = 0;
+            break;
+        case '$':
+        case STITCH_END_KEY:
+            if (state->view.cy < state->buffer.num_lines) state->view.cx = state->buffer.lines[state->view.cy].size;
+            break;
+        case 'g':
+            state->view.cy = 0;
+            state->view.cx = 0;
+            break;
+        case 'G':
+            state->view.cy = state->buffer.num_lines - 1;
+            if (state->view.cy < 0) state->view.cy = 0;
+            state->view.cx = 0;
+            break;
+        case 'x':
+            if (state->view.cy < state->buffer.num_lines && state->view.cx < state->buffer.lines[state->view.cy].size) {
+                state->view.cx++;
+                buffer_del_char(&state->buffer, &state->view);
+            }
+            break;
+        case 'd':
+            state->editor.last_key = 'd';
+            break;
+        case STITCH_PAGE_UP:
+        case STITCH_PAGE_DOWN:
+            {
+                if (c == STITCH_PAGE_UP) state->view.cy = state->view.row_off;
+                else if (c == STITCH_PAGE_DOWN) {
+                    state->view.cy = state->view.row_off + state->view.screen_rows - 1;
+                    if (state->view.cy > state->buffer.num_lines) state->view.cy = state->buffer.num_lines;
+                }
+                int times = state->view.screen_rows;
+                while (times--)
+                    editor_move_cursor(state, c == STITCH_PAGE_UP ? STITCH_ARROW_UP : STITCH_ARROW_DOWN);
+            }
+            break;
+    }
+}

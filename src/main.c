@@ -4,61 +4,63 @@
 #include <unistd.h>
 #include <locale.h>
 #include <ncurses.h>
-#include "stitch.h"
-#include "stitch/editor/commands/parser.h"
+#include "stitch/types.h"
+#include "stitch/core/terminal.h"
+#include "stitch/buffer/io.h"
+#include "stitch/ui/render.h"
+#include "stitch/editor/modes.h"
+#include "stitch/editor/commands.h"
 
-/* The global EditorConfig instance */
-EditorConfig E;
-
-void editorAtExit(void) {
-    disableRawMode();
+void app_at_exit(void) {
+    core_disable_raw_mode();
 }
 
-void initEditor(void) {
-    E.cx = 0;
-    E.cy = 0;
-    E.row_off = 0;
-    E.col_off = 0;
-    E.num_lines = 0;
-    E.lines = NULL;
-    E.filename = NULL;
-    E.status_msg[0] = '\0';
-    E.dirty = 0;
-    E.mode = MODE_NORMAL;
-    E.last_key = 0;
-    E.shell_pid = -1;
-    E.history_count = 0;
-    for (int i = 0; i < 10; i++) E.history[i] = NULL;
-    E.search_query = NULL;
+void init_app_state(StitchState *state) {
+    state->buffer.lines = NULL;
+    state->buffer.num_lines = 0;
+    state->buffer.filename = NULL;
+    state->buffer.dirty = 0;
 
-    getWindowSize(&E.screen_rows, &E.screen_cols);
-    
-    /* Ensure we have at least room for status/message bars and one line of text */
-    if (E.screen_rows < 3) E.screen_rows = 3;
-    if (E.screen_cols < 10) E.screen_cols = 10;
+    state->view.cx = 0;
+    state->view.cy = 0;
+    state->view.row_off = 0;
+    state->view.col_off = 0;
 
-    /* Reserves space for status bar and command line */
-    E.screen_rows -= 2; 
+    state->ui.status_msg[0] = '\0';
+
+    state->editor.mode = MODE_NORMAL;
+    state->editor.last_key = 0;
+    state->editor.search_query = NULL;
+    state->editor.history_count = 0;
+    for (int i = 0; i < 10; i++) state->editor.history[i] = NULL;
+
+    state->core.shell_pid = -1;
+
+    core_get_window_size(&state->view.screen_rows, &state->view.screen_cols);
+    if (state->view.screen_rows < 3) state->view.screen_rows = 3;
+    state->view.screen_rows -= 2;
 }
 
 int main(int argc, char *argv[]) {
     setlocale(LC_ALL, "");
-    enableRawMode();
-    initEditor();
-    atexit(editorAtExit);
+    
+    StitchState app;
+    core_enable_raw_mode(&app);
+    init_app_state(&app);
+    atexit(app_at_exit);
 
     if (argc >= 2) {
-        if (editorOpen(argv[1]) == -1) {
-            editorSetStatusMessage("Could not open file: %s", argv[1]);
+        if (editorOpen(&app, argv[1]) == -1) {
+            ui_set_status_message(&app, "Could not open file: %s", argv[1]);
         }
     }
 
-    editorSetStatusMessage("HELP: :q = quit");
+    ui_set_status_message(&app, "HELP: :q = quit | i = insert | / = search");
 
     while (1) {
-        if (E.shell_pid != -1) editorUpdateShellStatus();
-        editorRefreshScreen();
-        editorProcessKeypress();
+        if (app.core.shell_pid != -1) editor_update_shell_status(&app);
+        ui_refresh_screen(&app);
+        editor_process_keypress(&app);
     }
 
     return 0;

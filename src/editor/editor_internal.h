@@ -1,0 +1,20 @@
+#ifndef STITCH_EDITOR_INTERNAL_H
+#define STITCH_EDITOR_INTERNAL_H
+
+#include "stitch/types.h"
+
+/* Mode handlers */
+void handle_normal_mode(StitchState *state, int c);
+void handle_insert_mode(StitchState *state, int c);
+void handle_command_prompt_mode(StitchState *state, int c);
+
+/* Command components */
+void cmd_save_execute(StitchState *state);
+void cmd_quit_execute(StitchState *state);
+void cmd_search_execute(StitchState *state);
+void cmd_shell_execute(StitchState *state, const char *command);
+
+/* Movement logic */
+void editor_move_cursor(StitchState *state, int key);
+
+#endif

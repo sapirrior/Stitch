@@ -43,6 +43,15 @@ typedef struct {
     char *render;
 } Line;
 
+/* --- Domain Specific Structs --- */
+
+typedef struct {
+    Line *lines;
+    int num_lines;
+    char *filename;
+    int dirty;
+} StitchBuffer;
+
 typedef struct {
     int cx, cy;
     int rx;
@@ -50,26 +59,33 @@ typedef struct {
     int screen_cols;
     int row_off;
     int col_off;
-    int num_lines;
-    Line *lines;
-    char *filename;
+} StitchView;
+
+typedef struct {
     char status_msg[80];
-    int dirty;
+} StitchUI;
+
+typedef struct {
     Mode mode;
     int last_key;
-    struct termios orig_termios;
-
-    /* Background Shell Execution */
-    pid_t shell_pid;
-
-    /* Command History */
+    char *search_query;
     char *history[10];
     int history_count;
+} StitchEditor;
 
-    /* Search */
-    char *search_query;
-} EditorConfig;
+typedef struct {
+    struct termios orig_termios;
+    pid_t shell_pid;
+} StitchCore;
 
-extern EditorConfig E;
+/* --- Unified Application Context --- */
+
+typedef struct {
+    StitchBuffer buffer;
+    StitchView view;
+    StitchUI ui;
+    StitchEditor editor;
+    StitchCore core;
+} StitchState;
 
 #endif
