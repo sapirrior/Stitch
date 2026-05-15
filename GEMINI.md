@@ -53,4 +53,5 @@ Every specific behavior is isolated to its own file:
 ### UI & Aesthetics
 - **Organic Warmth Palette**: Sage (Normal), Terracotta (Insert), Ochre (Command).
 - **Background**: Standard Black text grid; Deep Earth (#2F2A28) status bar.
-- **Clean Interface**: No tildes or EOF indicators.
+- **Gutter**: Subtle Midnight (dark blue-ish black) background for line numbers.
+- **Clean Interface**: No tildes or EOF indicators; modified files indicated by `*` directly attached to the filename.
