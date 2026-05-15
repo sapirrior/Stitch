@@ -1,0 +1,9 @@
+# Build artifacts
+build/
+
+# Object files (backup in case they are generated outside build/)
+*.o
+
+# Editor temporary files
+*.swp
+.DS_Store

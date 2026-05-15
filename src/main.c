@@ -16,6 +16,7 @@ void initEditor(void) {
     E.dirty = 0;
     E.mode = MODE_NORMAL;
     E.last_key = 0;
+    E.resize_pending = 0;
 
     if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
     /* Reserves space for status bar and command line */

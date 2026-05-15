@@ -12,19 +12,19 @@ EditorConfig E;
 
 void handleSigwinch(int sig) {
     (void)sig;
-    if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
-    E.screen_rows -= 2; // Keep space for status and message bars
-    editorRefreshScreen();
+    E.resize_pending = 1;
 }
 
 void die(const char *s) {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    /* Leave alternate buffer on exit */
+    write(STDOUT_FILENO, "\x1b[?1049l", 8);
     perror(s);
     exit(1);
 }
 
 void disableRawMode(void) {
+    /* Leave alternate buffer */
+    write(STDOUT_FILENO, "\x1b[?1049l", 8);
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
         die("tcsetattr");
 }
@@ -43,13 +43,21 @@ void enableRawMode(void) {
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
     
-    signal(SIGWINCH, handleSigwinch);
+    /* Enter alternate buffer */
+    write(STDOUT_FILENO, "\x1b[?1049h", 8);
+
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = handleSigwinch;
+    sa.sa_flags = 0; /* Explicitly NOT setting SA_RESTART */
+    sigaction(SIGWINCH, &sa, NULL);
 }
 
 int editorReadKey(void) {
     int nread;
     char c;
     while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+        if (nread == -1 && errno == EINTR) return KEY_RESIZE;
         if (nread == -1 && errno != EAGAIN) die("read");
     }
 
@@ -71,6 +79,16 @@ int editorReadKey(void) {
                         case '6': return PAGE_DOWN;
                         case '7': return HOME_KEY;
                         case '8': return END_KEY;
+                    }
+                } else if (seq[2] >= '0' && seq[2] <= '9') {
+                    /* Handle 2-digit sequences like \x1b[15~ */
+                    char seq3;
+                    if (read(STDIN_FILENO, &seq3, 1) != 1) return '\x1b';
+                    if (seq3 == '~') {
+                        int code = (seq[1] - '0') * 10 + (seq[2] - '0');
+                        switch (code) {
+                            case 15: /* F5 or some other key, just placeholder logic */ break;
+                        }
                     }
                 }
             } else {

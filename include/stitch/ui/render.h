@@ -5,5 +5,6 @@
 
 void editorRefreshScreen(void);
 void editorScroll(void);
+void editorHandleResize(void);
 
 #endif

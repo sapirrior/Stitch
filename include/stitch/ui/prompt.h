@@ -4,6 +4,6 @@
 #include "../types.h"
 
 void editorSetStatusMessage(const char *fmt, ...);
-char *editorPrompt(char *prompt);
+char *editorPrompt(char *prompt, void (*callback)(char *, int));
 
 #endif

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "stitch/core/terminal.h"
 #include "stitch/ui/render.h"
 
 struct abuf {
@@ -109,7 +110,18 @@ static void editorDrawMessageBar(struct abuf *ab) {
     if (msglen > 0) abAppend(ab, E.status_msg, msglen);
 }
 
+void editorHandleResize(void) {
+    if (E.resize_pending) {
+        E.resize_pending = 0;
+        if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
+        E.screen_rows -= 2;
+        /* Clear screen once to avoid ghosts from resize artifacts */
+        write(STDOUT_FILENO, "\x1b[2J", 4);
+    }
+}
+
 void editorRefreshScreen(void) {
+    editorHandleResize();
     editorScroll();
 
     struct abuf ab = ABUF_INIT;

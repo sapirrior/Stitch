@@ -1,3 +1,4 @@
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -6,6 +7,63 @@
 #include "stitch/buffer/engine.h"
 #include "stitch/ui/prompt.h"
 #include "stitch/editor/commands/parser.h"
+
+static void editorFindCallback(char *query, int key) {
+    static int last_match = -1;
+    static int direction = 1;
+
+    if (key == '\r' || key == '\x1b') {
+        last_match = -1;
+        direction = 1;
+        return;
+    } else if (key == ARROW_RIGHT || key == ARROW_DOWN) {
+        direction = 1;
+    } else if (key == ARROW_LEFT || key == ARROW_UP) {
+        direction = -1;
+    } else {
+        last_match = -1;
+        direction = 1;
+    }
+
+    if (last_match == -1) direction = 1;
+    int current = last_match;
+    for (int i = 0; i < E.num_lines; i++) {
+        current += direction;
+        if (current == -1) current = E.num_lines - 1;
+        else if (current == E.num_lines) current = 0;
+
+        Line *line = &E.lines[current];
+        char *match = strstr(line->render, query);
+        if (match) {
+            last_match = current;
+            E.cy = current;
+            E.cx = 0;
+            char *chars_match = strstr(line->chars, query);
+            if (chars_match) E.cx = (int)(chars_match - line->chars);
+            E.row_off = E.num_lines; /* Force scroll */
+            break;
+        }
+    }
+}
+
+void editorFind(void) {
+    int saved_cx = E.cx;
+    int saved_cy = E.cy;
+    int saved_col_off = E.col_off;
+    int saved_row_off = E.row_off;
+
+    char *query = editorPrompt("Search: %s (Use Arrows/Enter/Esc)",
+                               editorFindCallback);
+
+    if (query) {
+        free(query);
+    } else {
+        E.cx = saved_cx;
+        E.cy = saved_cy;
+        E.col_off = saved_col_off;
+        E.row_off = saved_row_off;
+    }
+}
 
 void editorMoveCursor(int key) {
     Line *line = (E.cy >= E.num_lines) ? NULL : &E.lines[E.cy];
@@ -48,7 +106,6 @@ void editorProcessKeypress(void) {
     int c = editorReadKey();
 
     if (E.mode == MODE_NORMAL) {
-        /* Handle multi-key commands like dd */
         if (E.last_key == 'd') {
             if (c == 'd') {
                 editorDelLine(E.cy);
@@ -73,9 +130,7 @@ void editorProcessKeypress(void) {
                 editorSetStatusMessage("-- INSERT --");
                 break;
             case 'A':
-                if (E.cy < E.num_lines) {
-                    E.cx = E.lines[E.cy].size;
-                }
+                if (E.cy < E.num_lines) E.cx = E.lines[E.cy].size;
                 E.mode = MODE_INSERT;
                 editorSetStatusMessage("-- INSERT --");
                 break;
@@ -94,7 +149,7 @@ void editorProcessKeypress(void) {
                 break;
             case ':': {
                 E.mode = MODE_COMMAND;
-                char *cmd = editorPrompt(":%s");
+                char *cmd = editorPrompt(":%s", NULL);
                 if (cmd) {
                     handleCommand(cmd);
                     free(cmd);
@@ -102,6 +157,9 @@ void editorProcessKeypress(void) {
                 E.mode = MODE_NORMAL;
                 break;
             }
+            case '/':
+                editorFind();
+                break;
             case 'h':
             case 'j':
             case 'k':
@@ -139,13 +197,11 @@ void editorProcessKeypress(void) {
             case PAGE_UP:
             case PAGE_DOWN:
                 {
-                    if (c == PAGE_UP) {
-                        E.cy = E.row_off;
-                    } else if (c == PAGE_DOWN) {
+                    if (c == PAGE_UP) E.cy = E.row_off;
+                    else if (c == PAGE_DOWN) {
                         E.cy = E.row_off + E.screen_rows - 1;
                         if (E.cy > E.num_lines) E.cy = E.num_lines;
                     }
-
                     int times = E.screen_rows;
                     while (times--)
                         editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);

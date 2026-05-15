@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <signal.h>
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define STITCH_VERSION "0.1.0"
@@ -27,7 +28,8 @@ enum EditorKey {
     HOME_KEY,
     END_KEY,
     PAGE_UP,
-    PAGE_DOWN
+    PAGE_DOWN,
+    KEY_RESIZE
 };
 
 typedef struct {
@@ -51,6 +53,7 @@ typedef struct {
     int dirty;
     Mode mode;
     int last_key;
+    volatile sig_atomic_t resize_pending;
     struct termios orig_termios;
 } EditorConfig;
 
