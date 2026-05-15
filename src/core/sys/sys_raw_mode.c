@@ -3,18 +3,29 @@
 #include "../core_internal.h"
 
 void sys_init_colors(void) {
-    /* Monochrome-Plus: Use terminal defaults for background */
     start_color();
     use_default_colors();
 
-    /* 1: Accent Color (e.g., White on Black, for mode labels) */
-    init_pair(1, COLOR_WHITE, COLOR_BLACK);
-    
-    /* 2: Normal Text (Standard) */
+    /* Define Organic Warmth Palette for functional highlights */
+    if (can_change_color()) {
+        init_color(10, 580, 680, 560); /* Sage Green */
+        init_color(11, 840, 580, 480); /* Terracotta Orange */
+        init_color(12, 940, 780, 380); /* Ochre Yellow */
+        init_color(13, 184, 165, 157); /* Earth Background */
+    }
+
+    /* 1: Earth on Sage (Normal Mode) */
+    init_pair(1, 13, 10);
+    /* 2: Earth on Terracotta (Insert Mode) */
+    init_pair(2, 13, 11);
+    /* 3: Earth on Ochre (Command Mode) */
+    init_pair(3, 13, 12);
+    /* 4: Standard Text */
     init_pair(4, -1, -1);
-    
-    /* 3: Gutter/Dimmed Text */
-    init_pair(5, COLOR_BLACK, -1); /* Using Black on -1 (transparent) for dimmed effect */
+    /* 5: Earth on Sage (Position Indicator) */
+    init_pair(5, 13, 10);
+    /* 6: Earth Background for Status Bar */
+    init_pair(6, -1, 13);
     
     bkgd(COLOR_PAIR(4));
 }
