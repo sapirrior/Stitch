@@ -51,7 +51,6 @@ Every specific behavior is isolated to its own file:
 - **Naming**: Strict domain-based prefixing (e.g., `ui_`, `buffer_`, `core_`, `cmd_`).
 
 ### UI & Aesthetics
-- **Organic Warmth Palette**: Sage (Normal), Terracotta (Insert), Ochre (Command).
-- **Background**: Standard Black text grid; Deep Earth (#2F2A28) status bar.
-- **Gutter**: Subtle Midnight (dark blue-ish black) background for line numbers.
+- **Organic Warmth Palette (Stitch-Forest)**: Sage Green (Normal), Terracotta Orange (Insert), Ochre Yellow (Command).
+- **Background**: Soft Dark Grey-Green (`#2D353B`) for text grid; Midnight Blue-Grey for status bar and gutter.
 - **Clean Interface**: No tildes or EOF indicators; modified files indicated by `*` directly attached to the filename.
