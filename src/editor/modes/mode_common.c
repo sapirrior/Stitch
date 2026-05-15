@@ -22,8 +22,10 @@ void editor_move_cursor(StitchState *state, int key) {
                 state->view.cx++;
                 while (state->view.cx < line->size && (line->chars[state->view.cx] & 0xc0) == 0x80) state->view.cx++;
             } else if (line && state->view.cx == line->size) {
-                state->view.cy++;
-                state->view.cx = 0;
+                if (state->view.cy + 1 < state->buffer.num_lines) {
+                    state->view.cy++;
+                    state->view.cx = 0;
+                }
             }
             break;
         case 'k':
@@ -32,11 +34,11 @@ void editor_move_cursor(StitchState *state, int key) {
             break;
         case 'j':
         case STITCH_ARROW_DOWN:
-            if (state->view.cy < state->buffer.num_lines) state->view.cy++;
+            if (state->view.cy + 1 < state->buffer.num_lines) state->view.cy++;
             break;
     }
 
     line = (state->view.cy >= state->buffer.num_lines) ? NULL : &state->buffer.lines[state->view.cy];
-    int linelen = line ? line->size : 0;
+    size_t linelen = line ? line->size : 0;
     if (state->view.cx > linelen) state->view.cx = linelen;
 }

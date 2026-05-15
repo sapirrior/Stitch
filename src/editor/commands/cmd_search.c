@@ -7,7 +7,7 @@
 #include "../editor_internal.h"
 
 static void editor_find_callback(StitchState *state, char *query, int key) {
-    static int last_match = -1;
+    static ssize_t last_match = -1;
     static int direction = 1;
 
     free(state->editor.search_query);
@@ -32,38 +32,38 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
     int total_matches = 0;
     int current_match_idx = -1;
 
-    for (int i = 0; i < state->buffer.num_lines; i++) {
+    for (size_t i = 0; i < state->buffer.num_lines; i++) {
         char *line_ptr = state->buffer.lines[i].render;
-        while ((line_ptr = editorStrcasestr(line_ptr, query)) != NULL) {
+        while (line_ptr && (line_ptr = editorStrcasestr(line_ptr, query)) != NULL) {
             total_matches++;
             line_ptr += strlen(query);
         }
     }
 
-    int current = last_match;
-    if (current >= state->buffer.num_lines) current = -1;
+    ssize_t current = last_match;
+    if (current >= (ssize_t)state->buffer.num_lines) current = -1;
 
-    for (int i = 0; i < state->buffer.num_lines; i++) {
+    for (size_t i = 0; i < state->buffer.num_lines; i++) {
         current += direction;
-        if (current < 0) current = state->buffer.num_lines - 1;
-        else if (current >= state->buffer.num_lines) current = 0;
+        if (current < 0) current = (ssize_t)state->buffer.num_lines - 1;
+        else if (current >= (ssize_t)state->buffer.num_lines) current = 0;
 
-        if (state->buffer.lines[current].render == NULL) continue;
+        if (current < 0 || state->buffer.lines[current].render == NULL) continue;
         char *match = editorStrcasestr(state->buffer.lines[current].render, query);
         if (match) {
             last_match = current;
-            state->view.cy = current;
+            state->view.cy = (int)current;
             state->view.cx = 0;
             if (state->buffer.lines[current].chars) {
                 char *chars_match = editorStrcasestr(state->buffer.lines[current].chars, query);
                 if (chars_match) state->view.cx = (int)(chars_match - state->buffer.lines[current].chars);
             }
-            state->view.row_off = state->buffer.num_lines;
+            state->view.row_off = (int)state->buffer.num_lines;
 
             int found_count = 0;
-            for (int j = 0; j <= current; j++) {
+            for (ssize_t j = 0; j <= current; j++) {
                 char *lp = state->buffer.lines[j].render;
-                while ((lp = editorStrcasestr(lp, query)) != NULL) {
+                while (lp && (lp = editorStrcasestr(lp, query)) != NULL) {
                     found_count++;
                     lp += strlen(query);
                 }

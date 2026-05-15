@@ -4,21 +4,23 @@ Stitch is a C11 modal text editor that combines Nano's clean bottom-bar aestheti
 
 ## Architecture
 
-The codebase is organized into four primary domains, each following a **Handler-Component** pattern:
+The codebase is organized into four primary domains, following a **Handler-Component** pattern. Global state is strictly forbidden; all application data is encapsulated in a `StitchState` context and injected via pointers.
 
-- **Core (`src/core/`, `include/stitch/core/`)**: Manages system-level terminal state and memory. Handlers coordinate low-level `ncursesw` initialization and input normalization.
-- **Buffer (`src/buffer/`, `include/stitch/buffer/`)**: Manages text data and file I/O. Uses isolated operations for line manipulation, insertion, and deletion.
-- **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering using isolated components (Status Bar, Message Bar, Text Grid). Uses `wnoutrefresh()` and `doupdate()` for efficient screen synchronization.
-- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements modal logic and command execution. Each command and mode is isolated into its own component file.
+- **Core (`src/core/`)**: System-level terminal state, input normalization, and memory management.
+- **Buffer (`src/buffer/`)**: Text data management and file I/O. Atomic manipulations (insert, delete, line split) are isolated in `operations/`.
+- **UI (`src/ui/`)**: Rendering logic using modular components (Status Bar, Message Bar, Text Grid) and `ncursesw`.
+- **Editor (`src/editor/`)**: Modal logic and command execution. Each mode and command is an isolated component.
 
 ## Technical Standards
 
-### Context Injection
-Stitch avoids global state. All application data is encapsulated in a unified `StitchState` context, which is instantiated in `main.c` and passed by pointer to all handlers.
+### Scale & Performance
+- **Large File Support**: All coordinates, line counts, and buffer lengths use `size_t`, ensuring safety for files >2GB.
+- **Amortized O(1) Editing**: Lines utilize exponential capacity growth (doubling on overflow) to minimize reallocations during active typing.
+- **Memory Safety**: All allocations must use `editorMalloc` and `editorRealloc` wrappers for centralized error handling.
 
-### Deep Modularization
-Every specific behavior is isolated to its own file within dedicated subdirectories:
-- `src/editor/commands/`: Individual command implementations (save, quit, search).
+### Modularization
+Every specific behavior is isolated to its own file:
+- `src/editor/commands/`: Individual command implementations (e.g., `cmd_save.c`, `cmd_search.c`).
 - `src/editor/modes/`: Modal behavior (Normal, Insert, Command).
 - `src/ui/components/`: Modular UI widgets.
 - `src/buffer/operations/`: Atomic buffer manipulations.
@@ -31,7 +33,7 @@ Every specific behavior is isolated to its own file within dedicated subdirector
 - **ncursesw** library.
 
 ### Commands
-- **Build**: `make` (Recursively compiles all modular components)
+- **Build**: `make` (Produces a zero-warning build).
 - **Run**: `./build/stitch [filename]`
 - **Clean**: `make clean`
 
@@ -39,10 +41,10 @@ Every specific behavior is isolated to its own file within dedicated subdirector
 
 ### Standards
 - **Language**: Strict C11 (`-std=c11`).
-- **Portability**: Target POSIX.1-2008 and X/Open Extended.
+- **Portability**: Target POSIX.1-2008 and `_XOPEN_SOURCE_EXTENDED` for ncursesw.
 - **Naming**: Strict domain-based prefixing (e.g., `ui_`, `buffer_`, `core_`, `cmd_`).
 
 ### UI & Aesthetics
 - **Organic Warmth Palette**: Sage (Normal), Terracotta (Insert), Ochre (Command).
-- **Background**: Standard Black background for the text grid; Deep Earth background for the status bar.
+- **Background**: Standard Black text grid; Deep Earth (#2F2A28) status bar.
 - **Clean Interface**: No tildes or EOF indicators.

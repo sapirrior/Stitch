@@ -21,7 +21,7 @@ void ui_status_bar_draw(StitchState *state) {
     int len = snprintf(status, sizeof(status), " %s %s",
         state->buffer.filename ? state->buffer.filename : "[No Name]",
         state->buffer.dirty ? "*" : "");
-    snprintf(rstatus, sizeof(rstatus), " %d:%d ",
+    snprintf(rstatus, sizeof(rstatus), " %zu:%zu ",
         state->view.cy + 1, state->view.cx + 1);
 
     int mode_len = (int)strlen(mode_str);

@@ -77,8 +77,11 @@ void handle_normal_mode(StitchState *state, int c) {
             state->view.cx = 0;
             break;
         case 'G':
-            state->view.cy = state->buffer.num_lines - 1;
-            if (state->view.cy < 0) state->view.cy = 0;
+            if (state->buffer.num_lines > 0) {
+                state->view.cy = state->buffer.num_lines - 1;
+            } else {
+                state->view.cy = 0;
+            }
             state->view.cx = 0;
             break;
         case 'x':
@@ -95,7 +98,7 @@ void handle_normal_mode(StitchState *state, int c) {
             {
                 if (c == STITCH_PAGE_UP) state->view.cy = state->view.row_off;
                 else if (c == STITCH_PAGE_DOWN) {
-                    state->view.cy = state->view.row_off + state->view.screen_rows - 1;
+                    state->view.cy = state->view.row_off + (size_t)state->view.screen_rows - 1;
                     if (state->view.cy > state->buffer.num_lines) state->view.cy = state->buffer.num_lines;
                 }
                 int times = state->view.screen_rows;

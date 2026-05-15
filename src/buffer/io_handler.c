@@ -9,9 +9,9 @@
 #include "stitch/ui/render.h"
 #include "stitch/ui/prompt.h"
 
-static char *buffer_rows_to_string(StitchBuffer *buf, int *buflen) {
-    int totlen = 0;
-    for (int i = 0; i < buf->num_lines; i++)
+static char *buffer_rows_to_string(StitchBuffer *buf, size_t *buflen) {
+    size_t totlen = 0;
+    for (size_t i = 0; i < buf->num_lines; i++)
         totlen += buf->lines[i].size + 1;
     *buflen = totlen;
 
@@ -19,7 +19,7 @@ static char *buffer_rows_to_string(StitchBuffer *buf, int *buflen) {
 
     char *res = editorMalloc(totlen);
     char *p = res;
-    for (int i = 0; i < buf->num_lines; i++) {
+    for (size_t i = 0; i < buf->num_lines; i++) {
         memcpy(p, buf->lines[i].chars, buf->lines[i].size);
         p += buf->lines[i].size;
         *p = '\n';
@@ -37,20 +37,22 @@ void editorSave(StitchState *state) {
         }
     }
 
-    int len;
+    size_t len;
     char *buf = buffer_rows_to_string(&state->buffer, &len);
 
-    char tmp_filename[256];
-    snprintf(tmp_filename, sizeof(tmp_filename), ".%s.tmp", state->buffer.filename);
+    size_t tmp_len = strlen(state->buffer.filename) + 6;
+    char *tmp_filename = editorMalloc(tmp_len);
+    snprintf(tmp_filename, tmp_len, ".%s.tmp", state->buffer.filename);
 
     FILE *fp = fopen(tmp_filename, "w");
     if (fp != NULL) {
-        if (len == 0 || fwrite(buf, 1, len, fp) == (size_t)len) {
+        if (len == 0 || fwrite(buf, 1, len, fp) == len) {
             if (fclose(fp) == 0) {
                 if (rename(tmp_filename, state->buffer.filename) == 0) {
                     free(buf);
+                    free(tmp_filename);
                     state->buffer.dirty = 0;
-                    ui_set_status_message(state, "%d bytes written to disk", len);
+                    ui_set_status_message(state, "%zu bytes written to disk", len);
                     return;
                 }
             }
@@ -59,7 +61,10 @@ void editorSave(StitchState *state) {
         }
     }
 
-    unlink(tmp_filename);
+    if (tmp_filename) {
+        unlink(tmp_filename);
+        free(tmp_filename);
+    }
     free(buf);
     ui_set_status_message(state, "Can't save! I/O error: %s", strerror(errno));
 }
@@ -79,7 +84,7 @@ int editorOpen(StitchState *state, char *filename) {
         while ((linelen = getline(&line, &linecap, fp)) != -1) {
             while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r'))
                 linelen--;
-            buffer_insert_line(&state->buffer, state->buffer.num_lines, line, linelen);
+            buffer_insert_line(&state->buffer, state->buffer.num_lines, line, (size_t)linelen);
         }
         free(line);
         fclose(fp);

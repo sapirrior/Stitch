@@ -4,7 +4,7 @@
 
 void buffer_free(StitchBuffer *buf) {
     if (buf->lines) {
-        for (int i = 0; i < buf->num_lines; i++) {
+        for (size_t i = 0; i < buf->num_lines; i++) {
             free(buf->lines[i].chars);
             free(buf->lines[i].render);
         }

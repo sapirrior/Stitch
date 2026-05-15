@@ -37,8 +37,10 @@ enum EditorKey {
 };
 
 typedef struct {
-    int size;
-    int rsize;
+    size_t size;
+    size_t rsize;
+    size_t capacity;
+    size_t rcapacity;
     char *chars;
     char *render;
 } Line;
@@ -47,18 +49,18 @@ typedef struct {
 
 typedef struct {
     Line *lines;
-    int num_lines;
+    size_t num_lines;
     char *filename;
     int dirty;
 } StitchBuffer;
 
 typedef struct {
-    int cx, cy;
-    int rx;
+    size_t cx, cy;
+    size_t rx;
     int screen_rows;
     int screen_cols;
-    int row_off;
-    int col_off;
+    size_t row_off;
+    size_t col_off;
 } StitchView;
 
 typedef struct {

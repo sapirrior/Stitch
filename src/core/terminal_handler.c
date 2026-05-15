@@ -12,6 +12,7 @@ void core_disable_raw_mode(void) {
 }
 
 int core_read_key(StitchState *state) {
+    (void)state;
     int c = getch();
     if (c == ERR) return STITCH_KEY_NONE;
     if (c == KEY_ENTER || c == '\n' || c == '\r') return '\r';

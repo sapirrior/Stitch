@@ -8,7 +8,7 @@
 void ui_text_grid_draw(StitchState *state) {
     attron(COLOR_PAIR(4)); /* Cream on Earth */
     for (int y = 0; y < state->view.screen_rows; y++) {
-        int filerow = y + state->view.row_off;
+        size_t filerow = (size_t)y + state->view.row_off;
         move(y, 0);
         clrtoeol();
 

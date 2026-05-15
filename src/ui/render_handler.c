@@ -10,7 +10,7 @@ void ui_update_viewport(StitchState *state) {
     state->view.rx = 0;
     if (state->view.cy < state->buffer.num_lines) {
         Line *line = &state->buffer.lines[state->view.cy];
-        for (int j = 0; j < state->view.cx && j < line->size; j++) {
+        for (size_t j = 0; j < state->view.cx && j < line->size; j++) {
             unsigned char c = (unsigned char)line->chars[j];
             if (c == '\t') {
                 state->view.rx += (STITCH_TAB_STOP - (state->view.rx % STITCH_TAB_STOP));
@@ -25,14 +25,14 @@ void ui_update_viewport(StitchState *state) {
     if (state->view.cy < state->view.row_off) {
         state->view.row_off = state->view.cy;
     }
-    if (state->view.cy >= state->view.row_off + state->view.screen_rows) {
-        state->view.row_off = state->view.cy - state->view.screen_rows + 1;
+    if (state->view.cy >= state->view.row_off + (size_t)state->view.screen_rows) {
+        state->view.row_off = state->view.cy - (size_t)state->view.screen_rows + 1;
     }
     if (state->view.rx < state->view.col_off) {
         state->view.col_off = state->view.rx;
     }
-    if (state->view.rx >= state->view.col_off + state->view.screen_cols) {
-        state->view.col_off = state->view.rx - state->view.screen_cols + 1;
+    if (state->view.rx >= state->view.col_off + (size_t)state->view.screen_cols) {
+        state->view.col_off = state->view.rx - (size_t)state->view.screen_cols + 1;
     }
 }
 
@@ -48,7 +48,7 @@ void ui_refresh_screen(StitchState *state) {
         int msg_cols = editorRowByteToCol(state->ui.status_msg, (int)strlen(state->ui.status_msg), (int)strlen(state->ui.status_msg));
         move(state->view.screen_rows + 1, msg_cols);
     } else {
-        move(state->view.cy - state->view.row_off, state->view.rx - state->view.col_off);
+        move((int)(state->view.cy - state->view.row_off), (int)(state->view.rx - state->view.col_off));
     }
 
     wnoutrefresh(stdscr);
