@@ -6,7 +6,23 @@
 #include "stitch/core/terminal.h"
 #include "ui_internal.h"
 
+int ui_get_gutter_width(StitchState *state) {
+    if (!state->ui.show_line_numbers) return 0;
+    int digits = 1;
+    size_t n = state->buffer.num_lines;
+    if (n == 0) n = 1;
+    while (n >= 10) {
+        digits++;
+        n /= 10;
+    }
+    return digits + 2; /* e.g. " 1 " */
+}
+
 void ui_update_viewport(StitchState *state) {
+    int gutter_width = ui_get_gutter_width(state);
+    int available_cols = state->view.screen_cols - gutter_width;
+    if (available_cols < 1) available_cols = 1;
+
     state->view.rx = 0;
     if (state->view.cy < state->buffer.num_lines) {
         Line *line = &state->buffer.lines[state->view.cy];
@@ -31,8 +47,8 @@ void ui_update_viewport(StitchState *state) {
     if (state->view.rx < state->view.col_off) {
         state->view.col_off = state->view.rx;
     }
-    if (state->view.rx >= state->view.col_off + (size_t)state->view.screen_cols) {
-        state->view.col_off = state->view.rx - (size_t)state->view.screen_cols + 1;
+    if (state->view.rx >= state->view.col_off + (size_t)available_cols) {
+        state->view.col_off = state->view.rx - (size_t)available_cols + 1;
     }
 }
 
@@ -48,7 +64,8 @@ void ui_refresh_screen(StitchState *state) {
         int msg_cols = editorRowByteToCol(state->ui.status_msg, (int)strlen(state->ui.status_msg), (int)strlen(state->ui.status_msg));
         move(state->view.screen_rows + 1, msg_cols);
     } else {
-        move((int)(state->view.cy - state->view.row_off), (int)(state->view.rx - state->view.col_off));
+        int gutter_width = ui_get_gutter_width(state);
+        move((int)(state->view.cy - state->view.row_off), (int)(state->view.rx - state->view.col_off) + gutter_width);
     }
 
     wnoutrefresh(stdscr);

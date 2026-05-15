@@ -2,6 +2,7 @@
 #include <string.h>
 #include "stitch/types.h"
 #include "stitch/core/terminal.h"
+#include "stitch/buffer/engine.h"
 #include "buffer_internal.h"
 
 void buffer_row_insert_char(StitchBuffer *buf, Line *line, int at, int c) {
@@ -23,7 +24,9 @@ void buffer_row_insert_char(StitchBuffer *buf, Line *line, int at, int c) {
 void buffer_insert_char(StitchBuffer *buf, StitchView *view, int c) {
     if ((size_t)view->cy == buf->num_lines) {
         buffer_insert_line(buf, buf->num_lines, "", 0);
+        buffer_push_undo(buf, UNDO_INSERT_LINE, buf->num_lines - 1, 0, 0, NULL, 0);
     }
+    buffer_push_undo(buf, UNDO_INSERT_CHAR, view->cy, view->cx, c, NULL, 0);
     buffer_row_insert_char(buf, &buf->lines[view->cy], view->cx, c);
     view->cx++;
 }
@@ -32,6 +35,7 @@ void buffer_insert_newline(StitchBuffer *buf, StitchView *view) {
     if (view->cy < 0 || (size_t)view->cy >= buf->num_lines) {
         if ((size_t)view->cy == buf->num_lines) {
              buffer_insert_line(buf, buf->num_lines, "", 0);
+             buffer_push_undo(buf, UNDO_INSERT_LINE, buf->num_lines - 1, 0, 0, NULL, 0);
         } else {
              return;
         }
@@ -39,8 +43,10 @@ void buffer_insert_newline(StitchBuffer *buf, StitchView *view) {
 
     if (view->cx == 0) {
         buffer_insert_line(buf, (size_t)view->cy, "", 0);
+        buffer_push_undo(buf, UNDO_INSERT_LINE, view->cy, 0, 0, NULL, 0);
     } else {
         Line *line = &buf->lines[view->cy];
+        buffer_push_undo(buf, UNDO_SPLIT_LINE, view->cy, view->cx, 0, NULL, 0);
         buffer_insert_line(buf, (size_t)view->cy + 1, &line->chars[view->cx], line->size - (size_t)view->cx);
         line = &buf->lines[view->cy];
         line->size = (size_t)view->cx;

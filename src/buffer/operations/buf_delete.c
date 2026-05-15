@@ -2,6 +2,7 @@
 #include <string.h>
 #include "stitch/types.h"
 #include "stitch/core/terminal.h"
+#include "stitch/buffer/engine.h"
 #include "buffer_internal.h"
 
 void buffer_row_del_char(StitchBuffer *buf, Line *line, int at) {
@@ -23,12 +24,17 @@ void buffer_del_char(StitchBuffer *buf, StitchView *view) {
             bytes_to_del++;
         }
         while (bytes_to_del--) {
+            int c = line->chars[view->cx - 1];
+            buffer_push_undo(buf, UNDO_DELETE_CHAR, view->cy, view->cx - 1, c, NULL, 0);
             buffer_row_del_char(buf, line, view->cx - 1);
             view->cx--;
         }
     } else {
         size_t prev_line_idx = (size_t)view->cy - 1;
         view->cx = (int)buf->lines[prev_line_idx].size;
+        
+        buffer_push_undo(buf, UNDO_MERGE_LINE, view->cy, view->cx, 0, NULL, 0);
+
         size_t prev_len = buf->lines[prev_line_idx].size;
         size_t needed = prev_len + line->size + 1;
         

@@ -47,11 +47,38 @@ typedef struct {
 
 /* --- Domain Specific Structs --- */
 
+typedef enum {
+    UNDO_INSERT_CHAR,
+    UNDO_DELETE_CHAR,
+    UNDO_INSERT_LINE,
+    UNDO_DELETE_LINE,
+    UNDO_MERGE_LINE,
+    UNDO_SPLIT_LINE
+} UndoActionType;
+
+typedef struct UndoAction {
+    UndoActionType type;
+    size_t cy;
+    size_t cx;
+    int c;
+    char *text;
+    size_t len;
+    struct UndoAction *prev;
+    struct UndoAction *next;
+} UndoAction;
+
+typedef struct {
+    UndoAction *head;
+    UndoAction *current;
+} UndoStack;
+
 typedef struct {
     Line *lines;
     size_t num_lines;
     char *filename;
     int dirty;
+    UndoStack undo_stack;
+    bool is_undoing;
 } StitchBuffer;
 
 typedef struct {
@@ -65,6 +92,7 @@ typedef struct {
 
 typedef struct {
     char status_msg[80];
+    bool show_line_numbers;
 } StitchUI;
 
 typedef struct {

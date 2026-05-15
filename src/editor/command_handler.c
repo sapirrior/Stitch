@@ -40,6 +40,12 @@ void editor_handle_command(StitchState *state, const char *cmd) {
         exit(0);
     } else if (strcmp(cmd, "w") == 0) {
         cmd_save_execute(state);
+    } else if (strcmp(cmd, "number") == 0 || strcmp(cmd, "nu") == 0) {
+        state->ui.show_line_numbers = true;
+        ui_set_status_message(state, "Line numbers enabled");
+    } else if (strcmp(cmd, "nonumber") == 0 || strcmp(cmd, "nonu") == 0) {
+        state->ui.show_line_numbers = false;
+        ui_set_status_message(state, "Line numbers disabled");
     } else if (strcmp(cmd, "wq") == 0) {
         cmd_save_execute(state);
         exit(0);

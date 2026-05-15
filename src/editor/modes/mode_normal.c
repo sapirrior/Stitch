@@ -8,9 +8,12 @@
 void handle_normal_mode(StitchState *state, int c) {
     if (state->editor.last_key == 'd') {
         if (c == 'd') {
-            buffer_del_line(&state->buffer, state->view.cy);
-            if (state->view.cy == state->buffer.num_lines && state->view.cy > 0) state->view.cy--;
-            state->view.cx = 0;
+            if (state->view.cy < state->buffer.num_lines) {
+                buffer_push_undo(&state->buffer, UNDO_DELETE_LINE, state->view.cy, 0, 0, state->buffer.lines[state->view.cy].chars, state->buffer.lines[state->view.cy].size);
+                buffer_del_line(&state->buffer, state->view.cy);
+                if (state->view.cy == state->buffer.num_lines && state->view.cy > 0) state->view.cy--;
+                state->view.cx = 0;
+            }
         }
         state->editor.last_key = 0;
         return;
@@ -37,15 +40,23 @@ void handle_normal_mode(StitchState *state, int c) {
         case 'o':
             state->view.cy++;
             buffer_insert_line(&state->buffer, state->view.cy, "", 0);
+            buffer_push_undo(&state->buffer, UNDO_INSERT_LINE, state->view.cy, 0, 0, NULL, 0);
             state->view.cx = 0;
             state->editor.mode = MODE_INSERT;
             ui_set_status_message(state, "-- INSERT --");
             break;
         case 'O':
             buffer_insert_line(&state->buffer, state->view.cy, "", 0);
+            buffer_push_undo(&state->buffer, UNDO_INSERT_LINE, state->view.cy, 0, 0, NULL, 0);
             state->view.cx = 0;
             state->editor.mode = MODE_INSERT;
             ui_set_status_message(state, "-- INSERT --");
+            break;
+        case 'u':
+            buffer_undo(&state->buffer, &state->view);
+            break;
+        case 'U':
+            buffer_redo(&state->buffer, &state->view);
             break;
         case ':':
             state->editor.mode = MODE_COMMAND;

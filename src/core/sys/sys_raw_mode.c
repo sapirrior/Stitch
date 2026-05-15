@@ -31,6 +31,7 @@ void sys_init_ncurses(StitchState *state) {
     noecho();
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
+    set_escdelay(50);
     start_color();
     sys_init_colors();
     (void)state;

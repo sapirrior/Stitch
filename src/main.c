@@ -20,6 +20,9 @@ void init_app_state(StitchState *state) {
     state->buffer.num_lines = 0;
     state->buffer.filename = NULL;
     state->buffer.dirty = 0;
+    state->buffer.undo_stack.head = NULL;
+    state->buffer.undo_stack.current = NULL;
+    state->buffer.is_undoing = false;
 
     state->view.cx = 0;
     state->view.cy = 0;
@@ -27,6 +30,7 @@ void init_app_state(StitchState *state) {
     state->view.col_off = 0;
 
     state->ui.status_msg[0] = '\0';
+    state->ui.show_line_numbers = false;
 
     state->editor.mode = MODE_NORMAL;
     state->editor.last_key = 0;

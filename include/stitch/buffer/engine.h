@@ -11,4 +11,8 @@ void buffer_insert_char(StitchBuffer *buf, StitchView *view, int c);
 void buffer_insert_newline(StitchBuffer *buf, StitchView *view);
 void buffer_del_char(StitchBuffer *buf, StitchView *view);
 
+void buffer_push_undo(StitchBuffer *buf, UndoActionType type, size_t cy, size_t cx, int c, const char *text, size_t len);
+void buffer_undo(StitchBuffer *buf, StitchView *view);
+void buffer_redo(StitchBuffer *buf, StitchView *view);
+
 #endif
