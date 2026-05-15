@@ -5,18 +5,17 @@
 #include "ui_internal.h"
 
 void ui_status_bar_draw(StitchState *state) {
-    int mode_pair = 1;
     const char *mode_str = " NORMAL ";
-    if (state->editor.mode == MODE_INSERT) { mode_pair = 2; mode_str = " INSERT "; }
-    else if (state->editor.mode == MODE_COMMAND) { mode_pair = 3; mode_str = " COMMAND "; }
+    if (state->editor.mode == MODE_INSERT) mode_str = " INSERT ";
+    else if (state->editor.mode == MODE_COMMAND) mode_str = " COMMAND ";
 
     int y = state->view.screen_rows;
     move(y, 0);
-    attron(COLOR_PAIR(mode_pair));
-    addstr(mode_str);
-    attroff(COLOR_PAIR(mode_pair));
 
-    attron(COLOR_PAIR(5)); /* Cream on Earth */
+    attron(A_REVERSE);
+    addstr(mode_str);
+    attroff(A_REVERSE);
+
     char status[120], rstatus[120];
     int len = snprintf(status, sizeof(status), " %s%s",
         state->buffer.filename ? state->buffer.filename : "[No Name]",
@@ -26,17 +25,11 @@ void ui_status_bar_draw(StitchState *state) {
 
     int mode_len = (int)strlen(mode_str);
     int status_bytes = editorRowColToByte(status, len, state->view.screen_cols - mode_len - (int)strlen(rstatus) - 1);
-    
-    addnstr(status, status_bytes);
-    
-    int current_x = mode_len + editorRowByteToCol(status, len, status_bytes);
-    while (current_x < state->view.screen_cols - (int)strlen(rstatus)) {
-        addch(' ');
-        current_x++;
-    }
 
-    attroff(COLOR_PAIR(5));
-    attron(COLOR_PAIR(1)); /* Sage block for position */
+    addnstr(status, status_bytes);
+
+    /* Right aligned status */
+    int rstatus_len = (int)strlen(rstatus);
+    move(y, state->view.screen_cols - rstatus_len);
     addstr(rstatus);
-    attroff(COLOR_PAIR(1));
 }

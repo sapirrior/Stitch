@@ -80,22 +80,17 @@ void ui_text_grid_draw(StitchState *state) {
     size_t match_y = 0, match_x = 0;
     bool has_match = find_matching_bracket(state, &match_y, &match_x);
 
-    attron(COLOR_PAIR(4)); /* Cream on Black */
     for (int y = 0; y < state->view.screen_rows; y++) {
         size_t filerow = (size_t)y + state->view.row_off;
         move(y, 0);
         clrtoeol();
 
         if (state->ui.show_line_numbers) {
-            attron(COLOR_PAIR(5)); /* Cream on Earth */
             if (filerow < state->buffer.num_lines) {
+                attron(A_DIM);
                 mvprintw(y, 0, " %*zu", gutter_width - 2, filerow + 1);
-            } else {
-                for (int i = 0; i < gutter_width - 1; i++) mvaddch(y, i, ' ');
+                attroff(A_DIM);
             }
-            attroff(COLOR_PAIR(5));
-            attron(COLOR_PAIR(4));
-            mvaddch(y, gutter_width - 1, ' '); /* Gap in default color */
         }
 
         if (filerow >= state->buffer.num_lines) {
@@ -132,53 +127,11 @@ void ui_text_grid_draw(StitchState *state) {
             }
 
             move(y, gutter_width);
-            if (state->editor.search_query && state->editor.search_query[0] != '\0' && draw_len > 0) {
-                char *draw_ptr = &rline[coff];
-                int current_idx = 0;
-                int query_len = (int)strlen(state->editor.search_query);
-
-                while (current_idx < draw_len) {
-                    char *match = editorStrcasestr(&draw_ptr[current_idx], state->editor.search_query);
-                    if (match && (match - draw_ptr) < draw_len) {
-                        int match_idx = (int)(match - draw_ptr);
-                        for (int i = current_idx; i < match_idx; i++) {
-                            if (i == hl1_byte || i == hl2_byte) attron(COLOR_PAIR(2));
-                            addch(draw_ptr[i]);
-                            if (i == hl1_byte || i == hl2_byte) { attroff(COLOR_PAIR(2)); attron(COLOR_PAIR(4)); }
-                        }
-                        
-                        int qlen = query_len;
-                        if (match_idx + qlen > draw_len) qlen = draw_len - match_idx;
-                        
-                        attron(COLOR_PAIR(3)); /* Ochre (Highlight) */
-                        for (int i = 0; i < qlen; i++) {
-                            int b = match_idx + i;
-                            if (b == hl1_byte || b == hl2_byte) { attroff(COLOR_PAIR(3)); attron(COLOR_PAIR(2)); }
-                            addch(draw_ptr[b]);
-                            if (b == hl1_byte || b == hl2_byte) { attroff(COLOR_PAIR(2)); attron(COLOR_PAIR(3)); }
-                        }
-                        attroff(COLOR_PAIR(3));
-                        attron(COLOR_PAIR(4));
-                        
-                        current_idx = match_idx + qlen;
-                        if (qlen == 0) break;
-                    } else {
-                        for (int i = current_idx; i < draw_len; i++) {
-                            if (i == hl1_byte || i == hl2_byte) attron(COLOR_PAIR(2)); /* Terra for brackets */
-                            addch(draw_ptr[i]);
-                            if (i == hl1_byte || i == hl2_byte) { attroff(COLOR_PAIR(2)); attron(COLOR_PAIR(4)); }
-                        }
-                        break;
-                    }
-                }
-            } else {
-                for (int i = 0; i < draw_len; i++) {
-                    if (i == hl1_byte || i == hl2_byte) attron(COLOR_PAIR(2)); /* Terra for brackets */
-                    addch(rline[coff + i]);
-                    if (i == hl1_byte || i == hl2_byte) { attroff(COLOR_PAIR(2)); attron(COLOR_PAIR(4)); }
-                }
+            for (int i = 0; i < draw_len; i++) {
+                if (i == hl1_byte || i == hl2_byte) attron(A_REVERSE);
+                addch(rline[coff + i]);
+                if (i == hl1_byte || i == hl2_byte) attroff(A_REVERSE);
             }
         }
     }
-    attroff(COLOR_PAIR(4));
 }
