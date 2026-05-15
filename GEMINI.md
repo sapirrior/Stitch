@@ -51,6 +51,7 @@ Every specific behavior is isolated to its own file:
 - **Naming**: Strict domain-based prefixing (e.g., `ui_`, `buffer_`, `core_`, `cmd_`).
 
 ### UI & Aesthetics
-- **Organic Warmth Palette (Stitch-Forest)**: Sage Green (Normal), Terracotta Orange (Insert), Ochre Yellow (Command).
-- **Background**: Soft Dark Grey-Green (`#2D353B`) for text grid; Midnight Blue-Grey for status bar and gutter.
-- **Clean Interface**: No tildes or EOF indicators; modified files indicated by `*` directly attached to the filename.
+- **Design Philosophy**: Ultra-minimalist "Monochrome-Plus."
+- **Aesthetic**: Uses standard terminal transparency/backgrounds. Color is strictly reserved for functional state indicators (mode changes) and essential highlighting.
+- **Clean Interface**: No tildes, no decorative backgrounds; interface elements are sparse and purely functional.
+- **Modified Indicator**: `*` directly attached to the filename in the status bar.
