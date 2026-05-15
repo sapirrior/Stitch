@@ -10,8 +10,7 @@ void editorUpdateLine(Line *line) {
         if (line->chars[j] == '\t') tabs++;
 
     free(line->render);
-    line->render = malloc(line->size + tabs * (STITCH_TAB_STOP - 1) + 1);
-    if (!line->render) die("malloc");
+    line->render = editorMalloc(line->size + tabs * (STITCH_TAB_STOP - 1) + 1);
 
     int idx = 0;
     for (int j = 0; j < line->size; j++) {
@@ -29,13 +28,11 @@ void editorUpdateLine(Line *line) {
 void editorInsertLine(int at, char *s, size_t len) {
     if (at < 0 || at > E.num_lines) return;
 
-    E.lines = realloc(E.lines, sizeof(Line) * (E.num_lines + 1));
-    if (!E.lines) die("realloc");
+    E.lines = editorRealloc(E.lines, sizeof(Line) * (E.num_lines + 1));
     memmove(&E.lines[at + 1], &E.lines[at], sizeof(Line) * (E.num_lines - at));
 
     E.lines[at].size = (int)len;
-    E.lines[at].chars = malloc(len + 1);
-    if (!E.lines[at].chars) die("malloc");
+    E.lines[at].chars = editorMalloc(len + 1);
     memcpy(E.lines[at].chars, s, len);
     E.lines[at].chars[len] = '\0';
 
@@ -62,8 +59,7 @@ void editorDelLine(int at) {
 
 void editorRowInsertChar(Line *line, int at, int c) {
     if (at < 0 || at > line->size) at = line->size;
-    line->chars = realloc(line->chars, line->size + 2);
-    if (!line->chars) die("realloc");
+    line->chars = editorRealloc(line->chars, line->size + 2);
     memmove(&line->chars[at + 1], &line->chars[at], line->size - at + 1);
     line->size++;
     line->chars[at] = c;
@@ -113,8 +109,7 @@ void editorDelChar(void) {
     } else {
         E.cx = E.lines[E.cy - 1].size;
         int prev_len = E.lines[E.cy - 1].size;
-        E.lines[E.cy - 1].chars = realloc(E.lines[E.cy - 1].chars, prev_len + line->size + 1);
-        if (!E.lines[E.cy - 1].chars) die("realloc");
+        E.lines[E.cy - 1].chars = editorRealloc(E.lines[E.cy - 1].chars, prev_len + line->size + 1);
         memcpy(&E.lines[E.cy - 1].chars[prev_len], line->chars, line->size);
         E.lines[E.cy - 1].size += line->size;
         E.lines[E.cy - 1].chars[E.lines[E.cy - 1].size] = '\0';

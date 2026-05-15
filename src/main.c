@@ -22,6 +22,8 @@ void initEditor(void) {
     E.last_key = 0;
     E.resize_pending = 0;
     E.shell_pid = -1;
+    E.history_count = 0;
+    for (int i = 0; i < 10; i++) E.history[i] = NULL;
 
     if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) {
         if (isatty(STDOUT_FILENO)) die("getWindowSize");
@@ -29,8 +31,15 @@ void initEditor(void) {
         E.screen_rows = 24;
         E.screen_cols = 80;
     }
+    
+    /* Ensure we have at least room for status/message bars and one line of text */
+    if (E.screen_rows < 3) E.screen_rows = 3;
+    if (E.screen_cols < 10) E.screen_cols = 10;
+
     /* Reserves space for status bar and command line */
     E.screen_rows -= 2; 
+
+    setupSignals();
 }
 
 int main(int argc, char *argv[]) {

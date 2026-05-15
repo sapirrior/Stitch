@@ -6,10 +6,10 @@ Stitch is a C11 modal text editor that combines Nano's clean bottom-bar aestheti
 
 The codebase is organized into four primary domains:
 
-- **Core (`src/core/`, `include/stitch/core/`)**: Handles low-level system concerns, including POSIX terminal raw mode, signal-based resize handling (`SIGWINCH`), and the alternate buffer.
+- **Core (`src/core/`, `include/stitch/core/`)**: Handles low-level system concerns, including POSIX terminal raw mode, signal-based resize handling (`SIGWINCH`), and memory-safe allocation wrappers.
 - **Buffer (`src/buffer/`, `include/stitch/buffer/`)**: Manages the internal representation of the text. `engine.c` handles line storage and modification, while `io.c` manages atomic file operations.
-- **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering the editor state to the terminal using an append-buffer strategy. Includes the inverted status bar and interactive prompt system.
-- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements the modal logic (Normal, Insert, Command), key dispatching, and the internal command parser. Supports shell execution via `:! <command>`.
+- **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering the editor state to the terminal using an append-buffer strategy. Includes the inverted status bar, interactive prompt system, and non-blocking refresh logic.
+- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements the modal logic (Normal, Insert, Command), key dispatching, and the internal command parser. Supports shell execution via `:! <command>` and a 10-item command history with arrow-key navigation.
 
 ## Building and Running
 
@@ -20,7 +20,7 @@ The codebase is organized into four primary domains:
 ### Commands
 - **Build**: `make`
 - **Run**: `./build/stitch [filename]`
-- **Clean**: `rm -rf build/objs/* build/stitch` (or implement `make clean` in Makefile)
+- **Clean**: `make clean`
 
 ## Development Conventions
 
@@ -34,10 +34,12 @@ The codebase is organized into four primary domains:
 - **No Header**: The top of the screen is reserved for text only.
 - **Clean Empty Lines**: No tildes (`~`) or EOF indicators.
 - **Balanced Status Bar**: A neutral Deep Earth background with high-contrast, color-coded "Mode Blocks" (Sage/Terra/Ochre) for instant state recognition.
-- **Command Line**: The very bottom row remains visually neutral with no background colors, ensuring it doesn't distract from the editor content.
+- **Command Line**: The very bottom row remains visually neutral with no background colors.
 
 ### Technical Patterns
-- **Resize Handling**: Use `sigaction` with `SA_RESTART` disabled to ensure `read()` is interrupted by `SIGWINCH`, returning `KEY_RESIZE` for instant UI updates.
-- **Rendering**: Use `struct abuf` (append buffer) to batch `write()` calls and prevent screen flicker.
-- **Background Shell Execution**: Uses `fork()` and `waitpid(..., WNOHANG)` to execute shell commands silently in the background, reporting only the final exit status in the command line/message bar to maintain focus and responsiveness.
-- **Memory**: Always check `malloc`/`realloc` results. Free all allocated memory in the appropriate domain destructor or at exit.
+- **Memory Safety**: All allocations must use `editorMalloc`, `editorRealloc`, or `editorStrdup`. These wrappers provide centralized error handling via `die()`.
+- **Atomic Saving**: Files are saved using a "write-then-rename" strategy (writing to `.filename.tmp` first) to prevent data loss during crashes or power failures.
+- **Resize Handling**: `SIGWINCH` is handled via `sigaction` with `SA_RESTART` disabled. This ensures `read()` is interrupted, allowing `editorReadKey` to return `KEY_RESIZE` for instant UI updates.
+- **Background Shell Execution**: Uses `fork()` and `waitpid(..., WNOHANG)` to execute shell commands silently. Only one background process is allowed at a time.
+- **Command History**: A 10-item FIFO history is maintained for the command prompt, navigable via Up/Down arrow keys.
+- **TTY Robustness**: Always check `isatty()` before applying terminal attributes or writing escape sequences to support piped/non-interactive environments.

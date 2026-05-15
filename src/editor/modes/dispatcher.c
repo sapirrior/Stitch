@@ -153,6 +153,7 @@ void editorProcessKeypress(void) {
                 E.mode = MODE_COMMAND;
                 char *cmd = editorPrompt(":%s", NULL);
                 if (cmd) {
+                    editorAddHistory(cmd);
                     handleCommand(cmd);
                     free(cmd);
                 }

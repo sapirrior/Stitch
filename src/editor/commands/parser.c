@@ -12,6 +12,11 @@
 #include "stitch/ui/prompt.h"
 
 static void editorExecuteShellBackground(const char *cmd) {
+    if (E.shell_pid != -1) {
+        editorSetStatusMessage("A process is already running (PID %d)", E.shell_pid);
+        return;
+    }
+
     pid_t pid = fork();
     if (pid == -1) {
         editorSetStatusMessage("Fork failed: %s", strerror(errno));
@@ -63,6 +68,23 @@ void editorUpdateShellStatus(void) {
     }
 }
 
+void editorAddHistory(const char *cmd) {
+    if (cmd == NULL || cmd[0] == '\0') return;
+
+    /* Don't add if it's the same as the last command */
+    if (E.history_count > 0 && strcmp(E.history[E.history_count - 1], cmd) == 0) {
+        return;
+    }
+
+    if (E.history_count < 10) {
+        E.history[E.history_count++] = editorStrdup(cmd);
+    } else {
+        free(E.history[0]);
+        memmove(&E.history[0], &E.history[1], sizeof(char *) * 9);
+        E.history[9] = editorStrdup(cmd);
+    }
+}
+
 void handleCommand(const char *cmd) {
     if (cmd[0] == '!') {
         if (cmd[1] == '\0') {
@@ -91,7 +113,7 @@ void handleCommand(const char *cmd) {
             editorSetStatusMessage("No write since last change (add ! to override)");
             return;
         }
-        char *filename = strdup(cmd + 2);
+        char *filename = editorStrdup(cmd + 2);
         if (editorOpen(filename) == -1) {
             editorSetStatusMessage("Could not open file: %s", filename);
         }

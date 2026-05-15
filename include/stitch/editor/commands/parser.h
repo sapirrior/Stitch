@@ -5,5 +5,6 @@
 
 void handleCommand(const char *cmd);
 void editorUpdateShellStatus(void);
+void editorAddHistory(const char *cmd);
 
 #endif

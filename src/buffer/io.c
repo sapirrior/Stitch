@@ -15,8 +15,7 @@ static char *editorRowsToString(int *buflen) {
 
     if (totlen == 0) return NULL;
 
-    char *buf = malloc(totlen);
-    if (!buf) die("malloc");
+    char *buf = editorMalloc(totlen);
     char *p = buf;
     for (int i = 0; i < E.num_lines; i++) {
         memcpy(p, E.lines[i].chars, E.lines[i].size);
@@ -40,18 +39,26 @@ void editorSave(void) {
     int len;
     char *buf = editorRowsToString(&len);
 
-    FILE *fp = fopen(E.filename, "w");
+    char tmp_filename[256];
+    snprintf(tmp_filename, sizeof(tmp_filename), ".%s.tmp", E.filename);
+
+    FILE *fp = fopen(tmp_filename, "w");
     if (fp != NULL) {
         if (len == 0 || fwrite(buf, 1, len, fp) == (size_t)len) {
+            if (fclose(fp) == 0) {
+                if (rename(tmp_filename, E.filename) == 0) {
+                    free(buf);
+                    E.dirty = 0;
+                    editorSetStatusMessage("%d bytes written to disk", len);
+                    return;
+                }
+            }
+        } else {
             fclose(fp);
-            free(buf);
-            E.dirty = 0;
-            editorSetStatusMessage("%d bytes written to disk", len);
-            return;
         }
-        fclose(fp);
     }
 
+    unlink(tmp_filename);
     free(buf);
     editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
@@ -62,7 +69,7 @@ int editorOpen(char *filename) {
 
     editorFreeBuffer();
     free(E.filename);
-    E.filename = strdup(filename);
+    E.filename = editorStrdup(filename);
 
     if (fp) {
         char *line = NULL;

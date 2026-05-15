@@ -15,24 +15,40 @@ void handleSigwinch(int sig) {
     E.resize_pending = 1;
 }
 
+void setupSignals(void) {
+    struct sigaction sa;
+    sa.sa_handler = handleSigwinch;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; /* No SA_RESTART so read() is interrupted */
+    if (sigaction(SIGWINCH, &sa, NULL) == -1) die("sigaction");
+}
+
 void die(const char *s) {
-    /* Leave alternate buffer on exit */
-    write(STDOUT_FILENO, "\x1b[?1049l", 8);
+    if (isatty(STDOUT_FILENO)) {
+        /* Leave alternate buffer on exit */
+        write(STDOUT_FILENO, "\x1b[?1049l", 8);
+    }
     perror(s);
     exit(1);
 }
 
 void disableRawMode(void) {
     if (!raw_mode_active) return;
-    /* Leave alternate buffer */
-    write(STDOUT_FILENO, "\x1b[?1049l", 8);
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-        die("tcsetattr");
+    if (isatty(STDOUT_FILENO)) {
+        /* Leave alternate buffer */
+        write(STDOUT_FILENO, "\x1b[?1049l", 8);
+    }
+    if (isatty(STDIN_FILENO)) {
+        if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
+            die("tcsetattr");
+    }
     raw_mode_active = 0;
 }
 
 void enableRawMode(void) {
     if (raw_mode_active) return;
+    if (!isatty(STDIN_FILENO)) return;
+
     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
     
     static int atexit_registered = 0;
@@ -76,6 +92,7 @@ int editorReadKey(void) {
     if (c == '\x1b') {
         char seq[3];
 
+        /* If we don't get the next byte in time, it's just an Esc keypress */
         if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
         if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
 
@@ -97,10 +114,7 @@ int editorReadKey(void) {
                     char seq3;
                     if (read(STDIN_FILENO, &seq3, 1) != 1) return '\x1b';
                     if (seq3 == '~') {
-                        int code = (seq[1] - '0') * 10 + (seq[2] - '0');
-                        switch (code) {
-                            case 15: /* F5 or some other key, just placeholder logic */ break;
-                        }
+                        /* Reserved for future use (e.g. Function keys) */
                     }
                 }
             } else {
@@ -135,4 +149,22 @@ int getWindowSize(int *rows, int *cols) {
         *rows = ws.ws_row;
         return 0;
     }
+}
+
+void *editorMalloc(size_t size) {
+    void *p = malloc(size);
+    if (!p) die("malloc");
+    return p;
+}
+
+void *editorRealloc(void *ptr, size_t size) {
+    void *p = realloc(ptr, size);
+    if (!p && size > 0) die("realloc");
+    return p;
+}
+
+char *editorStrdup(const char *s) {
+    char *p = strdup(s);
+    if (!p) die("strdup");
+    return p;
 }

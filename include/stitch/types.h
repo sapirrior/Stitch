@@ -59,6 +59,10 @@ typedef struct {
 
     /* Background Shell Execution */
     pid_t shell_pid;
+
+    /* Command History */
+    char *history[10];
+    int history_count;
 } EditorConfig;
 
 extern EditorConfig E;

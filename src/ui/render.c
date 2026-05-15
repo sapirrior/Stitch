@@ -13,8 +13,7 @@ struct abuf {
 #define ABUF_INIT {NULL, 0}
 
 static void abAppend(struct abuf *ab, const char *s, int len) {
-    char *new = realloc(ab->b, ab->len + len);
-    if (new == NULL) return;
+    char *new = editorRealloc(ab->b, ab->len + len);
     memcpy(&new[ab->len], s, len);
     ab->b = new;
     ab->len += len;
@@ -143,6 +142,10 @@ void editorHandleResize(void) {
     if (E.resize_pending) {
         E.resize_pending = 0;
         if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
+        
+        if (E.screen_rows < 3) E.screen_rows = 3;
+        if (E.screen_cols < 10) E.screen_cols = 10;
+
         E.screen_rows -= 2; /* Status bar + Message bar */
         write(STDOUT_FILENO, "\x1b[2J", 4);
     }
