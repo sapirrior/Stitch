@@ -49,6 +49,9 @@ void editorScroll(void) {
 }
 
 static void editorDrawRows(struct abuf *ab) {
+    /* Apply base Cream foreground for the editor rows */
+    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
+
     for (int y = 0; y < E.screen_rows; y++) {
         int filerow = y + E.row_off;
         if (filerow >= E.num_lines) {
@@ -71,35 +74,61 @@ static void editorDrawRows(struct abuf *ab) {
         abAppend(ab, "\x1b[K", 3);
         abAppend(ab, "\r\n", 2);
     }
+    abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
 }
 
 static void editorDrawStatusBar(struct abuf *ab) {
-    abAppend(ab, "\x1b[7m", 4);
-    char status[120], rstatus[120];
-    
-    const char *mode_str = (E.mode == MODE_INSERT) ? "INSERT" : 
-                           (E.mode == MODE_COMMAND) ? "COMMAND" : "NORMAL";
+    /* Start with the Deep Earth background */
+    abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
+    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
 
-    int len = snprintf(status, sizeof(status), " %s  |  %s %s",
-        mode_str, E.filename ? E.filename : "[No Name]",
+    const char *mode_str = " NORMAL ";
+    const char *mode_bg = STITCH_BG_SAGE;
+
+    if (E.mode == MODE_INSERT) {
+        mode_str = " INSERT ";
+        mode_bg = STITCH_BG_TERRA;
+    } else if (E.mode == MODE_COMMAND) {
+        mode_str = " COMMAND ";
+        mode_bg = STITCH_BG_OCHRE;
+    }
+
+    /* Draw the Mode Block with its accent color and dark text */
+    abAppend(ab, mode_bg, (int)strlen(mode_bg));
+    abAppend(ab, STITCH_FG_EARTH, (int)strlen(STITCH_FG_EARTH));
+    abAppend(ab, mode_str, (int)strlen(mode_str));
+
+    /* Revert to status bar base colors for the rest */
+    abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
+    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
+
+    char status[120], rstatus[120];
+    int len = snprintf(status, sizeof(status), " %s %s",
+        E.filename ? E.filename : "[No Name]",
         E.dirty ? "*" : "");
     
     int rlen = snprintf(rstatus, sizeof(rstatus), " %d:%d ",
         E.cy + 1, E.cx + 1);
     
-    if (len > E.screen_cols) len = E.screen_cols;
-    abAppend(ab, status, len);
+    /* Calculate remaining space, account for the mode_str already written */
+    int current_len = (int)strlen(mode_str);
+    if (len + current_len > E.screen_cols) len = E.screen_cols - current_len;
+    if (len > 0) {
+        abAppend(ab, status, len);
+        current_len += len;
+    }
     
-    while (len < E.screen_cols) {
-        if (E.screen_cols - len == rlen) {
+    while (current_len < E.screen_cols) {
+        if (E.screen_cols - current_len == rlen) {
             abAppend(ab, rstatus, rlen);
             break;
         } else {
             abAppend(ab, " ", 1);
-            len++;
+            current_len++;
         }
     }
-    abAppend(ab, "\x1b[m", 3);
+
+    abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
     abAppend(ab, "\r\n", 2);
 }
 
@@ -107,7 +136,13 @@ static void editorDrawMessageBar(struct abuf *ab) {
     abAppend(ab, "\x1b[K", 3);
     int msglen = (int)strlen(E.status_msg);
     if (msglen > E.screen_cols) msglen = E.screen_cols;
-    if (msglen > 0) abAppend(ab, E.status_msg, msglen);
+    
+    if (msglen > 0) {
+        /* Use standard Cream foreground with no special background */
+        abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
+        abAppend(ab, E.status_msg, msglen);
+        abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
+    }
 }
 
 void editorHandleResize(void) {
