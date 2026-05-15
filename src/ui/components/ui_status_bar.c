@@ -18,7 +18,7 @@ void ui_status_bar_draw(StitchState *state) {
 
     attron(COLOR_PAIR(5)); /* Cream on Earth */
     char status[120], rstatus[120];
-    int len = snprintf(status, sizeof(status), " %s %s",
+    int len = snprintf(status, sizeof(status), " %s%s",
         state->buffer.filename ? state->buffer.filename : "[No Name]",
         state->buffer.dirty ? "*" : "");
     snprintf(rstatus, sizeof(rstatus), " %zu:%zu ",
