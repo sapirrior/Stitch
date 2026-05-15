@@ -52,6 +52,6 @@ Every specific behavior is isolated to its own file:
 
 ### UI & Aesthetics
 - **Design Philosophy**: Ultra-minimalist "Monochrome-Plus."
-- **Aesthetic**: Uses standard terminal transparency/backgrounds. Color is strictly reserved for functional state indicators (mode changes) and essential highlighting.
-- **Clean Interface**: No tildes, no decorative backgrounds; interface elements are sparse and purely functional.
+- **Aesthetic**: Uses standard terminal transparency/backgrounds. Color is strictly reserved for functional state indicators (Mode and Position) using the "Organic Warmth" palette (Sage Green, Terracotta Orange, Ochre Yellow).
+- **Clean Interface**: Sparse and functional, with no decorative backgrounds.
 - **Modified Indicator**: `*` directly attached to the filename in the status bar.
