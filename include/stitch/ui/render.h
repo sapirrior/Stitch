@@ -12,6 +12,19 @@
 #define STITCH_BG_TERRA   "\x1b[48;2;195;122;103m"
 #define STITCH_BG_OCHRE   "\x1b[48;2;215;160;75m"
 
+/* RGB Hex Values */
+#define RGB_CREAM 0xF7F3E8
+#define RGB_EARTH 0x2F2A28
+#define RGB_SAGE  0x829672
+#define RGB_TERRA 0xC37A67
+#define RGB_OCHRE 0xD7A04B
+
+void editorInitGrid(int w, int h);
+void editorResizeGrid(int w, int h);
+void editorFreeGrid(void);
+void gridClear(void);
+void gridPutChar(int x, int y, const char *utf8, uint32_t fg, uint32_t bg);
+
 void editorRefreshScreen(void);
 void editorSetStatusMessage(const char *fmt, ...);
 void editorHandleResize(void);

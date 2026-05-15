@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -std=c11 -Iinclude
+CFLAGS = -Wall -Wextra -pedantic -std=c11 -Iinclude -D_XOPEN_SOURCE_EXTENDED
 SRC_DIR = src
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/objs
@@ -14,7 +14,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJ)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ) -lncursesw
 
 # Pattern rule for object files, creating directories as needed
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c

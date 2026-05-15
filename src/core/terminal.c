@@ -1,154 +1,120 @@
-#include <unistd.h>
-#include <termios.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
-#include <sys/ioctl.h>
-#include <signal.h>
+#include <string.h>
+#include <ncurses.h>
 #include "stitch/core/terminal.h"
 #include "stitch/ui/render.h"
 
-static int raw_mode_active = 0;
-
-void handleSigwinch(int sig) {
-    (void)sig;
-    E.resize_pending = 1;
-}
-
-void setupSignals(void) {
-    struct sigaction sa;
-    sa.sa_handler = handleSigwinch;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0; /* No SA_RESTART so read() is interrupted */
-    if (sigaction(SIGWINCH, &sa, NULL) == -1) die("sigaction");
-}
-
 void die(const char *s) {
-    if (isatty(STDOUT_FILENO)) {
-        /* Leave alternate buffer on exit */
-        write(STDOUT_FILENO, "\x1b[?1049l", 8);
-    }
+    endwin();
     perror(s);
     exit(1);
 }
 
 void disableRawMode(void) {
-    if (!raw_mode_active) return;
-    if (isatty(STDOUT_FILENO)) {
-        /* Leave alternate buffer */
-        write(STDOUT_FILENO, "\x1b[?1049l", 8);
-    }
-    if (isatty(STDIN_FILENO)) {
-        if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-            die("tcsetattr");
-    }
-    raw_mode_active = 0;
+    endwin();
 }
 
 void enableRawMode(void) {
-    if (raw_mode_active) return;
-    if (!isatty(STDIN_FILENO)) return;
-
-    if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
+    initscr();
+    raw();
+    noecho();
+    keypad(stdscr, TRUE);
+    nodelay(stdscr, TRUE);
+    start_color();
     
-    static int atexit_registered = 0;
-    if (!atexit_registered) {
-        atexit(disableRawMode);
-        atexit_registered = 1;
-    }
-
-    struct termios raw = E.orig_termios;
-    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    raw.c_oflag &= ~(OPOST);
-    raw.c_cflag |= (CS8);
-    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
-
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
-    raw_mode_active = 1;
-    
-    /* Enter alternate buffer */
-    write(STDOUT_FILENO, "\x1b[?1049h", 8);
-
-    struct sigaction sa;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_handler = handleSigwinch;
-    sa.sa_flags = 0; /* Explicitly NOT setting SA_RESTART */
-    sigaction(SIGWINCH, &sa, NULL);
-}
-
-int editorReadKey(void) {
-    int nread;
-    char c;
-    nread = read(STDIN_FILENO, &c, 1);
-    if (nread == 0) return KEY_NONE;
-    if (nread == -1) {
-        if (errno == EINTR) return KEY_RESIZE;
-        if (errno == EAGAIN) return KEY_NONE;
-        die("read");
-    }
-
-    if (c == '\x1b') {
-        char seq[3];
-
-        /* If we don't get the next byte in time, it's just an Esc keypress */
-        if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
-        if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
-
-        if (seq[0] == '[') {
-            if (seq[1] >= '0' && seq[1] <= '9') {
-                if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
-                if (seq[2] == '~') {
-                    switch (seq[1]) {
-                        case '1': return HOME_KEY;
-                        case '3': return DEL_KEY;
-                        case '4': return END_KEY;
-                        case '5': return PAGE_UP;
-                        case '6': return PAGE_DOWN;
-                        case '7': return HOME_KEY;
-                        case '8': return END_KEY;
-                    }
-                } else if (seq[2] >= '0' && seq[2] <= '9') {
-                    /* Handle 2-digit sequences like \x1b[15~ */
-                    char seq3;
-                    if (read(STDIN_FILENO, &seq3, 1) != 1) return '\x1b';
-                    if (seq3 == '~') {
-                        /* Reserved for future use (e.g. Function keys) */
-                    }
-                }
-            } else {
-                switch (seq[1]) {
-                    case 'A': return ARROW_UP;
-                    case 'B': return ARROW_DOWN;
-                    case 'C': return ARROW_RIGHT;
-                    case 'D': return ARROW_LEFT;
-                    case 'H': return HOME_KEY;
-                    case 'F': return END_KEY;
-                }
-            }
-        } else if (seq[0] == 'O') {
-            switch (seq[1]) {
-                case 'H': return HOME_KEY;
-                case 'F': return END_KEY;
-            }
-        }
-
-        return '\x1b';
+    /* Initialize colors for "Organic Warmth" */
+    if (can_change_color()) {
+        /* Sage: 510, 588, 447 | Terra: 765, 478, 404 | Ochre: 843, 627, 294 */
+        /* Earth: 184, 165, 157 | Cream: 968, 953, 910 */
+        init_color(10, 510, 588, 447);
+        init_color(11, 765, 478, 404);
+        init_color(12, 843, 627, 294);
+        init_color(13, 184, 165, 157);
+        init_color(14, 968, 953, 910);
+        
+        init_pair(1, 13, 10); /* Earth on Sage (Normal Mode Block) */
+        init_pair(2, 13, 11); /* Earth on Terra (Insert Mode Block) */
+        init_pair(3, 13, 12); /* Earth on Ochre (Command Mode Block) */
+        init_pair(4, 14, 0);  /* Cream on Black (Default Editor) */
+        init_pair(5, 14, 13); /* Cream on Earth (Status Bar) */
     } else {
-        return c;
+        /* 256-color Fallback for standard terminals (like Termux default) */
+        /* 108: Sage-ish | 173: Terra-ish | 179: Ochre-ish | 235: Earth | 230: Cream */
+        init_pair(1, 235, 108);
+        init_pair(2, 235, 173);
+        init_pair(3, 235, 179);
+        init_pair(4, 230, 0);   /* Cream on Black */
+        init_pair(5, 230, 235); /* Cream on Earth */
     }
+
+    /* Set default background */
+    bkgd(COLOR_PAIR(4));
 }
 
 int getWindowSize(int *rows, int *cols) {
-    struct winsize ws;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-        return -1;
-    } else {
-        *cols = ws.ws_col;
-        *rows = ws.ws_row;
-        return 0;
+    getmaxyx(stdscr, *rows, *cols);
+    return 0;
+}
+
+void writeAll(int fd, const char *buf, size_t len) {
+    /* Not strictly needed for ncurses, but keeping for compatibility if used elsewhere */
+    (void)fd; (void)buf; (void)len;
+}
+
+int editorIsUtf8Start(unsigned char c) {
+    return (c < 0x80) || (c >= 0xc0);
+}
+
+int editorRowByteToCol(const char *s, int len, int target_byte) {
+    int col = 0;
+    for (int i = 0; i < target_byte && i < len; i++) {
+        if (editorIsUtf8Start((unsigned char)s[i])) col++;
     }
+    return col;
+}
+
+int editorRowColToByte(const char *s, int len, int target_col) {
+    int byte = 0;
+    int col = 0;
+    while (byte < len && col < target_col) {
+        if (editorIsUtf8Start((unsigned char)s[byte])) col++;
+        byte++;
+    }
+    while (byte < len && !editorIsUtf8Start((unsigned char)s[byte])) byte++;
+    return byte;
+}
+
+int editorReadKey(void) {
+    int c = getch();
+    if (c == ERR) return STITCH_KEY_NONE;
+    
+    /* Normalize Enter keys */
+    if (c == KEY_ENTER || c == '\n' || c == '\r') return '\r';
+
+    /* Normalize Backspace keys */
+    if (c == 127 || c == KEY_BACKSPACE) return STITCH_BACKSPACE;
+
+    /* Handle Ctrl Keys */
+    if (c < 32) return c;
+    
+    /* Map other ncurses keys to our enum */
+    switch (c) {
+        case KEY_LEFT: return STITCH_ARROW_LEFT;
+        case KEY_RIGHT: return STITCH_ARROW_RIGHT;
+        case KEY_UP: return STITCH_ARROW_UP;
+        case KEY_DOWN: return STITCH_ARROW_DOWN;
+        case KEY_DC: return STITCH_DEL_KEY;
+        case KEY_HOME: return STITCH_HOME_KEY;
+        case KEY_END: return STITCH_END_KEY;
+        case KEY_PPAGE: return STITCH_PAGE_UP;
+        case KEY_NPAGE: return STITCH_PAGE_DOWN;
+        case KEY_RESIZE: return STITCH_KEY_RESIZE;
+    }
+
+    return c;
 }
 
 void *editorMalloc(size_t size) {
@@ -159,7 +125,7 @@ void *editorMalloc(size_t size) {
 
 void *editorRealloc(void *ptr, size_t size) {
     void *p = realloc(ptr, size);
-    if (!p && size > 0) die("realloc");
+    if (!p) die("realloc");
     return p;
 }
 
@@ -170,7 +136,7 @@ char *editorStrdup(const char *s) {
 }
 
 char *editorStrcasestr(const char *haystack, const char *needle) {
-    if (!*needle) return (char *)haystack;
+    if (!haystack || !needle || !*needle) return (char *)haystack;
     for (; *haystack; haystack++) {
         if (toupper((unsigned char)*haystack) == toupper((unsigned char)*needle)) {
             const char *h, *n;

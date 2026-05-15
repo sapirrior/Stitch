@@ -7,6 +7,9 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <ncurses.h>
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define STITCH_VERSION "0.1.0"
@@ -19,18 +22,18 @@ typedef enum {
 } Mode;
 
 enum EditorKey {
-    KEY_NONE = 0,
-    BACKSPACE = 127,
-    ARROW_LEFT = 1000,
-    ARROW_RIGHT,
-    ARROW_UP,
-    ARROW_DOWN,
-    DEL_KEY,
-    HOME_KEY,
-    END_KEY,
-    PAGE_UP,
-    PAGE_DOWN,
-    KEY_RESIZE
+    STITCH_KEY_NONE = 0,
+    STITCH_BACKSPACE = KEY_BACKSPACE,
+    STITCH_ARROW_LEFT = KEY_LEFT,
+    STITCH_ARROW_RIGHT = KEY_RIGHT,
+    STITCH_ARROW_UP = KEY_UP,
+    STITCH_ARROW_DOWN = KEY_DOWN,
+    STITCH_DEL_KEY = KEY_DC,
+    STITCH_HOME_KEY = KEY_HOME,
+    STITCH_END_KEY = KEY_END,
+    STITCH_PAGE_UP = KEY_PPAGE,
+    STITCH_PAGE_DOWN = KEY_NPAGE,
+    STITCH_KEY_RESIZE = KEY_RESIZE
 };
 
 typedef struct {
@@ -54,7 +57,6 @@ typedef struct {
     int dirty;
     Mode mode;
     int last_key;
-    volatile sig_atomic_t resize_pending;
     struct termios orig_termios;
 
     /* Background Shell Execution */

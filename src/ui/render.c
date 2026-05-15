@@ -2,34 +2,24 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <ncurses.h>
 #include "stitch/core/terminal.h"
 #include "stitch/ui/render.h"
-
-struct abuf {
-    char *b;
-    int len;
-};
-
-#define ABUF_INIT {NULL, 0}
-
-static void abAppend(struct abuf *ab, const char *s, int len) {
-    char *new = editorRealloc(ab->b, ab->len + len);
-    memcpy(&new[ab->len], s, len);
-    ab->b = new;
-    ab->len += len;
-}
-
-static void abFree(struct abuf *ab) {
-    free(ab->b);
-}
 
 void editorScroll(void) {
     E.rx = 0;
     if (E.cy < E.num_lines) {
-        for (int j = 0; j < E.cx; j++) {
-            if (E.lines[E.cy].chars[j] == '\t')
-                E.rx += (STITCH_TAB_STOP - (E.rx % STITCH_TAB_STOP)) - 1;
-            E.rx++;
+        Line *line = &E.lines[E.cy];
+        for (int j = 0; j < E.cx && j < line->size; j++) {
+            unsigned char c = (unsigned char)line->chars[j];
+            if (c == '\t') {
+                E.rx += (STITCH_TAB_STOP - (E.rx % STITCH_TAB_STOP));
+            } else if (c < 32 || c == 127) {
+                E.rx += 2;
+            } else if (editorIsUtf8Start(c)) {
+                E.rx++;
+            }
         }
     }
 
@@ -47,162 +37,141 @@ void editorScroll(void) {
     }
 }
 
-static void editorDrawRows(struct abuf *ab) {
-    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
-
+static void editorDrawRows(void) {
+    attron(COLOR_PAIR(4)); /* Cream on Earth */
     for (int y = 0; y < E.screen_rows; y++) {
         int filerow = y + E.row_off;
+        move(y, 0);
+        clrtoeol();
+
         if (filerow >= E.num_lines) {
             if (E.num_lines == 0 && y == E.screen_rows / 3) {
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
                     "Stitch editor -- version %s", STITCH_VERSION);
                 if (welcomelen > E.screen_cols) welcomelen = E.screen_cols;
-                int padding = (E.screen_cols - welcomelen) / 2;
-                while (padding--) abAppend(ab, " ", 1);
-                abAppend(ab, welcome, welcomelen);
+                int x = (E.screen_cols - welcomelen) / 2;
+                mvaddnstr(y, x, welcome, welcomelen);
             }
         } else {
-            int len = E.lines[filerow].rsize - E.col_off;
-            if (len < 0) len = 0;
-            if (len > E.screen_cols) len = E.screen_cols;
+            int rlen = E.lines[filerow].rsize;
+            char *rline = E.lines[filerow].render;
 
-            if (E.search_query && len > 0) {
-                char *line = &E.lines[filerow].render[E.col_off];
-                int query_len = (int)strlen(E.search_query);
+            int coff = editorRowColToByte(rline, rlen, E.col_off);
+            int draw_len = editorRowColToByte(&rline[coff], rlen - coff, E.screen_cols);
+
+            if (E.search_query && E.search_query[0] != '\0' && draw_len > 0) {
+                char *draw_ptr = &rline[coff];
                 int current_idx = 0;
+                int query_len = (int)strlen(E.search_query);
 
-                while (current_idx < len) {
-                    char *match = editorStrcasestr(&line[current_idx], E.search_query);
-                    if (match && (match - line) < len) {
-                        int match_idx = (int)(match - line);
-                        /* Append text before match */
-                        abAppend(ab, &line[current_idx], match_idx - current_idx);
-                        /* Append highlighted match */
-                        abAppend(ab, STITCH_BG_OCHRE, (int)strlen(STITCH_BG_OCHRE));
-                        abAppend(ab, STITCH_FG_EARTH, (int)strlen(STITCH_FG_EARTH));
-                        abAppend(ab, match, query_len);
-                        abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
-                        abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
-                        current_idx = match_idx + query_len;
+                while (current_idx < draw_len) {
+                    char *match = editorStrcasestr(&draw_ptr[current_idx], E.search_query);
+                    if (match && (match - draw_ptr) < draw_len) {
+                        int match_idx = (int)(match - draw_ptr);
+                        addnstr(&draw_ptr[current_idx], match_idx - current_idx);
+                        
+                        int qlen = query_len;
+                        if (match_idx + qlen > draw_len) qlen = draw_len - match_idx;
+                        
+                        attron(COLOR_PAIR(3)); /* Ochre (Highlight) */
+                        addnstr(match, qlen);
+                        attroff(COLOR_PAIR(3));
+                        attron(COLOR_PAIR(4));
+                        
+                        current_idx = match_idx + qlen;
+                        if (qlen == 0) break; /* Avoid infinite loop */
                     } else {
-                        /* Append remaining text */
-                        abAppend(ab, &line[current_idx], len - current_idx);
+                        addnstr(&draw_ptr[current_idx], draw_len - current_idx);
                         break;
                     }
                 }
             } else {
-                abAppend(ab, &E.lines[filerow].render[E.col_off], len);
+                addnstr(&rline[coff], draw_len);
             }
         }
-
-        abAppend(ab, "\x1b[K", 3);
-        abAppend(ab, "\r\n", 2);
     }
-    abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
+    attroff(COLOR_PAIR(4));
 }
 
-static void editorDrawStatusBar(struct abuf *ab) {
-    abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
-    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
-
+static void editorDrawStatusBar(void) {
+    int mode_pair = 1;
     const char *mode_str = " NORMAL ";
-    const char *mode_bg = STITCH_BG_SAGE;
+    if (E.mode == MODE_INSERT) { mode_pair = 2; mode_str = " INSERT "; }
+    else if (E.mode == MODE_COMMAND) { mode_pair = 3; mode_str = " COMMAND "; }
 
-    if (E.mode == MODE_INSERT) {
-        mode_str = " INSERT ";
-        mode_bg = STITCH_BG_TERRA;
-    } else if (E.mode == MODE_COMMAND) {
-        mode_str = " COMMAND ";
-        mode_bg = STITCH_BG_OCHRE;
-    }
+    int y = E.screen_rows;
+    move(y, 0);
+    attron(COLOR_PAIR(mode_pair));
+    addstr(mode_str);
+    attroff(COLOR_PAIR(mode_pair));
 
-    abAppend(ab, mode_bg, (int)strlen(mode_bg));
-    abAppend(ab, STITCH_FG_EARTH, (int)strlen(STITCH_FG_EARTH));
-    abAppend(ab, mode_str, (int)strlen(mode_str));
-
-    abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
-    abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
-
+    attron(COLOR_PAIR(5)); /* Cream on Earth */
     char status[120], rstatus[120];
     int len = snprintf(status, sizeof(status), " %s %s",
         E.filename ? E.filename : "[No Name]",
         E.dirty ? "*" : "");
-    
-    int rlen = snprintf(rstatus, sizeof(rstatus), " %d:%d ",
+    snprintf(rstatus, sizeof(rstatus), " %d:%d ",
         E.cy + 1, E.cx + 1);
+
+    int mode_len = (int)strlen(mode_str);
+    int status_bytes = editorRowColToByte(status, len, E.screen_cols - mode_len - (int)strlen(rstatus) - 1);
     
-    int current_len = (int)strlen(mode_str);
-    if (len + current_len > E.screen_cols) len = E.screen_cols - current_len;
-    if (len > 0) {
-        abAppend(ab, status, len);
-        current_len += len;
-    }
+    addnstr(status, status_bytes);
     
-    while (current_len < E.screen_cols) {
-        if (E.screen_cols - current_len == rlen) {
-            abAppend(ab, rstatus, rlen);
-            break;
-        } else {
-            abAppend(ab, " ", 1);
-            current_len++;
-        }
+    int current_x = mode_len + editorRowByteToCol(status, len, status_bytes);
+    while (current_x < E.screen_cols - (int)strlen(rstatus)) {
+        addch(' ');
+        current_x++;
     }
 
-    abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
-    abAppend(ab, "\r\n", 2);
+    attroff(COLOR_PAIR(5));
+    attron(COLOR_PAIR(1)); /* Sage block for position */
+    addstr(rstatus);
+    attroff(COLOR_PAIR(1));
 }
 
-static void editorDrawMessageBar(struct abuf *ab) {
-    abAppend(ab, "\x1b[K", 3);
-    int msglen = (int)strlen(E.status_msg);
-    if (msglen > E.screen_cols) msglen = E.screen_cols;
-    
-    if (msglen > 0) {
-        abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
-        abAppend(ab, E.status_msg, msglen);
-        abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
-    }
-}
-
-void editorHandleResize(void) {
-    if (E.resize_pending) {
-        E.resize_pending = 0;
-        if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
-        
-        if (E.screen_rows < 3) E.screen_rows = 3;
-        if (E.screen_cols < 10) E.screen_cols = 10;
-
-        E.screen_rows -= 2; /* Status bar + Message bar */
-        write(STDOUT_FILENO, "\x1b[2J", 4);
-    }
+static void editorDrawMessageBar(void) {
+    move(E.screen_rows + 1, 0);
+    clrtoeol();
+    attron(COLOR_PAIR(4));
+    int msg_len = (int)strlen(E.status_msg);
+    int msg_bytes = editorRowColToByte(E.status_msg, msg_len, E.screen_cols);
+    addnstr(E.status_msg, msg_bytes);
+    attroff(COLOR_PAIR(4));
 }
 
 void editorRefreshScreen(void) {
-    editorHandleResize();
     editorScroll();
 
-    struct abuf ab = ABUF_INIT;
+    editorDrawRows();
+    editorDrawStatusBar();
+    editorDrawMessageBar();
 
-    abAppend(&ab, "\x1b[?25l", 6);
-    abAppend(&ab, "\x1b[H", 3);
-
-    editorDrawRows(&ab);
-    editorDrawStatusBar(&ab);
-    editorDrawMessageBar(&ab);
-
-    char buf[32];
+    /* Position cursor */
     if (E.mode == MODE_COMMAND) {
-        snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.screen_rows + 2,
-                                                  (int)strlen(E.status_msg) + 1);
+        int msg_cols = editorRowByteToCol(E.status_msg, (int)strlen(E.status_msg), (int)strlen(E.status_msg));
+        move(E.screen_rows + 1, msg_cols);
     } else {
-        snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.row_off) + 1,
-                                                  (E.rx - E.col_off) + 1);
+        move(E.cy - E.row_off, E.rx - E.col_off);
     }
-    abAppend(&ab, buf, (int)strlen(buf));
 
-    abAppend(&ab, "\x1b[?25h", 6);
+    wnoutrefresh(stdscr);
+    doupdate();
+}
 
-    write(STDOUT_FILENO, ab.b, ab.len);
-    abFree(&ab);
+void editorSetStatusMessage(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(E.status_msg, sizeof(E.status_msg), fmt, ap);
+    va_end(ap);
+}
+
+void editorHandleResize(void) {
+    resizeterm(0, 0);
+    clear();
+    getmaxyx(stdscr, E.screen_rows, E.screen_cols);
+    E.screen_rows -= 2;
+    if (E.screen_rows < 0) E.screen_rows = 0;
+    touchwin(stdscr);
 }

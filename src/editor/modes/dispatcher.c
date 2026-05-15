@@ -6,6 +6,7 @@
 #include "stitch/editor/modes.h"
 #include "stitch/buffer/engine.h"
 #include "stitch/ui/prompt.h"
+#include "stitch/ui/render.h"
 #include "stitch/editor/commands/parser.h"
 
 static void editorFindCallback(char *query, int key) {
@@ -19,9 +20,9 @@ static void editorFindCallback(char *query, int key) {
         last_match = -1;
         direction = 1;
         return;
-    } else if (key == ARROW_RIGHT || key == ARROW_DOWN) {
+    } else if (key == STITCH_ARROW_RIGHT || key == STITCH_ARROW_DOWN) {
         direction = 1;
-    } else if (key == ARROW_LEFT || key == ARROW_UP) {
+    } else if (key == STITCH_ARROW_LEFT || key == STITCH_ARROW_UP) {
         direction = -1;
     } else {
         last_match = -1;
@@ -48,19 +49,24 @@ static void editorFindCallback(char *query, int key) {
 
     /* Second pass: find the match to jump to */
     int current = last_match;
+    if (current >= E.num_lines) current = -1;
+
     for (int i = 0; i < E.num_lines; i++) {
         current += direction;
-        if (current == -1) current = E.num_lines - 1;
-        else if (current == E.num_lines) current = 0;
+        if (current < 0) current = E.num_lines - 1;
+        else if (current >= E.num_lines) current = 0;
 
+        if (E.lines[current].render == NULL) continue;
         char *match = editorStrcasestr(E.lines[current].render, query);
         if (match) {
             last_match = current;
             E.cy = current;
             E.cx = 0;
-            char *chars_match = editorStrcasestr(E.lines[current].chars, query);
-            if (chars_match) E.cx = (int)(chars_match - E.lines[current].chars);
-            E.row_off = E.num_lines; /* Force scroll */
+            if (E.lines[current].chars) {
+                char *chars_match = editorStrcasestr(E.lines[current].chars, query);
+                if (chars_match) E.cx = (int)(chars_match - E.lines[current].chars);
+            }
+            E.row_off = E.num_lines; /* Force scroll to current line */
 
             /* Calculate current_match_idx (approximate by line index for now) */
             int found_count = 0;
@@ -109,29 +115,31 @@ void editorMoveCursor(int key) {
 
     switch (key) {
         case 'h':
-        case ARROW_LEFT:
+        case STITCH_ARROW_LEFT:
             if (E.cx > 0) {
                 E.cx--;
+                while (E.cx > 0 && (line->chars[E.cx] & 0xc0) == 0x80) E.cx--;
             } else if (E.cy > 0) {
                 E.cy--;
                 E.cx = E.lines[E.cy].size;
             }
             break;
         case 'l':
-        case ARROW_RIGHT:
+        case STITCH_ARROW_RIGHT:
             if (line && E.cx < line->size) {
                 E.cx++;
+                while (E.cx < line->size && (line->chars[E.cx] & 0xc0) == 0x80) E.cx++;
             } else if (line && E.cx == line->size) {
                 E.cy++;
                 E.cx = 0;
             }
             break;
         case 'k':
-        case ARROW_UP:
+        case STITCH_ARROW_UP:
             if (E.cy > 0) E.cy--;
             break;
         case 'j':
-        case ARROW_DOWN:
+        case STITCH_ARROW_DOWN:
             if (E.cy < E.num_lines) E.cy++;
             break;
     }
@@ -144,7 +152,12 @@ void editorMoveCursor(int key) {
 void editorProcessKeypress(void) {
     int c = editorReadKey();
 
-    if (c == KEY_NONE) return;
+    if (c == STITCH_KEY_NONE) return;
+
+    if (c == STITCH_KEY_RESIZE) {
+        editorHandleResize();
+        return;
+    }
 
     if (E.mode == MODE_NORMAL) {
         if (E.last_key == 'd') {
@@ -206,18 +219,18 @@ void editorProcessKeypress(void) {
             case 'j':
             case 'k':
             case 'l':
-            case ARROW_UP:
-            case ARROW_DOWN:
-            case ARROW_LEFT:
-            case ARROW_RIGHT:
+            case STITCH_ARROW_UP:
+            case STITCH_ARROW_DOWN:
+            case STITCH_ARROW_LEFT:
+            case STITCH_ARROW_RIGHT:
                 editorMoveCursor(c);
                 break;
             case '0':
-            case HOME_KEY:
+            case STITCH_HOME_KEY:
                 E.cx = 0;
                 break;
             case '$':
-            case END_KEY:
+            case STITCH_END_KEY:
                 if (E.cy < E.num_lines) E.cx = E.lines[E.cy].size;
                 break;
             case 'g':
@@ -236,17 +249,17 @@ void editorProcessKeypress(void) {
             case 'd':
                 E.last_key = 'd';
                 break;
-            case PAGE_UP:
-            case PAGE_DOWN:
+            case STITCH_PAGE_UP:
+            case STITCH_PAGE_DOWN:
                 {
-                    if (c == PAGE_UP) E.cy = E.row_off;
-                    else if (c == PAGE_DOWN) {
+                    if (c == STITCH_PAGE_UP) E.cy = E.row_off;
+                    else if (c == STITCH_PAGE_DOWN) {
                         E.cy = E.row_off + E.screen_rows - 1;
                         if (E.cy > E.num_lines) E.cy = E.num_lines;
                     }
                     int times = E.screen_rows;
                     while (times--)
-                        editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+                        editorMoveCursor(c == STITCH_PAGE_UP ? STITCH_ARROW_UP : STITCH_ARROW_DOWN);
                 }
                 break;
         }
@@ -254,9 +267,9 @@ void editorProcessKeypress(void) {
         if (c == '\x1b') {
             E.mode = MODE_NORMAL;
             editorSetStatusMessage("");
-        } else if (c == BACKSPACE || c == CTRL_KEY('h')) {
+        } else if (c == STITCH_BACKSPACE || c == CTRL_KEY('h')) {
             editorDelChar();
-        } else if (c == ARROW_UP || c == ARROW_DOWN || c == ARROW_LEFT || c == ARROW_RIGHT) {
+        } else if (c == STITCH_ARROW_UP || c == STITCH_ARROW_DOWN || c == STITCH_ARROW_LEFT || c == STITCH_ARROW_RIGHT) {
             editorMoveCursor(c);
         } else if (c == '\r') {
             editorInsertNewline();

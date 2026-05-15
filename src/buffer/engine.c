@@ -6,24 +6,34 @@
 
 void editorUpdateLine(Line *line) {
     int tabs = 0;
-    for (int j = 0; j < line->size; j++)
-        if (line->chars[j] == '\t') tabs++;
+    int nonprint = 0;
+    for (int j = 0; j < line->size; j++) {
+        unsigned char c = (unsigned char)line->chars[j];
+        if (c == '\t') tabs++;
+        else if (c < 32 || c == 127) nonprint++;
+    }
 
     free(line->render);
-    line->render = editorMalloc(line->size + tabs * (STITCH_TAB_STOP - 1) + 1);
+    /* Non-printable chars like ^A take 2 bytes, tabs take up to STITCH_TAB_STOP */
+    line->render = editorMalloc(line->size + tabs * (STITCH_TAB_STOP - 1) + nonprint + 1);
 
     int idx = 0;
     for (int j = 0; j < line->size; j++) {
-        if (line->chars[j] == '\t') {
+        unsigned char c = (unsigned char)line->chars[j];
+        if (c == '\t') {
             line->render[idx++] = ' ';
             while (idx % STITCH_TAB_STOP != 0) line->render[idx++] = ' ';
+        } else if (c < 32 || c == 127) {
+            line->render[idx++] = '^';
+            line->render[idx++] = (c <= 26) ? '@' + c : '?';
         } else {
-            line->render[idx++] = line->chars[j];
+            line->render[idx++] = c;
         }
     }
     line->render[idx] = '\0';
     line->rsize = idx;
 }
+
 
 void editorInsertLine(int at, char *s, size_t len) {
     if (at < 0 || at > E.num_lines) return;
@@ -104,8 +114,14 @@ void editorDelChar(void) {
 
     Line *line = &E.lines[E.cy];
     if (E.cx > 0) {
-        editorRowDelChar(line, E.cx - 1);
-        E.cx--;
+        int bytes_to_del = 1;
+        while (E.cx - bytes_to_del > 0 && (line->chars[E.cx - bytes_to_del] & 0xc0) == 0x80) {
+            bytes_to_del++;
+        }
+        while (bytes_to_del--) {
+            editorRowDelChar(line, E.cx - 1);
+            E.cx--;
+        }
     } else {
         E.cx = E.lines[E.cy - 1].size;
         int prev_len = E.lines[E.cy - 1].size;
