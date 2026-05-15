@@ -105,6 +105,8 @@ void editorMoveCursor(int key) {
 void editorProcessKeypress(void) {
     int c = editorReadKey();
 
+    if (c == KEY_NONE) return;
+
     if (E.mode == MODE_NORMAL) {
         if (E.last_key == 'd') {
             if (c == 'd') {

@@ -3,6 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include "stitch.h"
+#include "stitch/editor/commands/parser.h"
+
+/* The global EditorConfig instance */
+EditorConfig E;
 
 void initEditor(void) {
     E.cx = 0;
@@ -17,8 +21,14 @@ void initEditor(void) {
     E.mode = MODE_NORMAL;
     E.last_key = 0;
     E.resize_pending = 0;
+    E.shell_pid = -1;
 
-    if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
+    if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) {
+        if (isatty(STDOUT_FILENO)) die("getWindowSize");
+        /* Default for non-tty */
+        E.screen_rows = 24;
+        E.screen_cols = 80;
+    }
     /* Reserves space for status bar and command line */
     E.screen_rows -= 2; 
 }
@@ -36,6 +46,7 @@ int main(int argc, char *argv[]) {
     editorSetStatusMessage("HELP: :q = quit");
 
     while (1) {
+        if (E.shell_pid != -1) editorUpdateShellStatus();
         editorRefreshScreen();
         editorProcessKeypress();
     }

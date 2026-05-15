@@ -49,7 +49,6 @@ void editorScroll(void) {
 }
 
 static void editorDrawRows(struct abuf *ab) {
-    /* Apply base Cream foreground for the editor rows */
     abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
 
     for (int y = 0; y < E.screen_rows; y++) {
@@ -78,7 +77,6 @@ static void editorDrawRows(struct abuf *ab) {
 }
 
 static void editorDrawStatusBar(struct abuf *ab) {
-    /* Start with the Deep Earth background */
     abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
     abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
 
@@ -93,12 +91,10 @@ static void editorDrawStatusBar(struct abuf *ab) {
         mode_bg = STITCH_BG_OCHRE;
     }
 
-    /* Draw the Mode Block with its accent color and dark text */
     abAppend(ab, mode_bg, (int)strlen(mode_bg));
     abAppend(ab, STITCH_FG_EARTH, (int)strlen(STITCH_FG_EARTH));
     abAppend(ab, mode_str, (int)strlen(mode_str));
 
-    /* Revert to status bar base colors for the rest */
     abAppend(ab, STITCH_BG_EARTH, (int)strlen(STITCH_BG_EARTH));
     abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
 
@@ -110,7 +106,6 @@ static void editorDrawStatusBar(struct abuf *ab) {
     int rlen = snprintf(rstatus, sizeof(rstatus), " %d:%d ",
         E.cy + 1, E.cx + 1);
     
-    /* Calculate remaining space, account for the mode_str already written */
     int current_len = (int)strlen(mode_str);
     if (len + current_len > E.screen_cols) len = E.screen_cols - current_len;
     if (len > 0) {
@@ -138,7 +133,6 @@ static void editorDrawMessageBar(struct abuf *ab) {
     if (msglen > E.screen_cols) msglen = E.screen_cols;
     
     if (msglen > 0) {
-        /* Use standard Cream foreground with no special background */
         abAppend(ab, STITCH_FG_CREAM, (int)strlen(STITCH_FG_CREAM));
         abAppend(ab, E.status_msg, msglen);
         abAppend(ab, STITCH_RESET, (int)strlen(STITCH_RESET));
@@ -149,8 +143,7 @@ void editorHandleResize(void) {
     if (E.resize_pending) {
         E.resize_pending = 0;
         if (getWindowSize(&E.screen_rows, &E.screen_cols) == -1) die("getWindowSize");
-        E.screen_rows -= 2;
-        /* Clear screen once to avoid ghosts from resize artifacts */
+        E.screen_rows -= 2; /* Status bar + Message bar */
         write(STDOUT_FILENO, "\x1b[2J", 4);
     }
 }

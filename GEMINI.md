@@ -9,7 +9,7 @@ The codebase is organized into four primary domains:
 - **Core (`src/core/`, `include/stitch/core/`)**: Handles low-level system concerns, including POSIX terminal raw mode, signal-based resize handling (`SIGWINCH`), and the alternate buffer.
 - **Buffer (`src/buffer/`, `include/stitch/buffer/`)**: Manages the internal representation of the text. `engine.c` handles line storage and modification, while `io.c` manages atomic file operations.
 - **UI (`src/ui/`, `include/stitch/ui/`)**: Responsible for rendering the editor state to the terminal using an append-buffer strategy. Includes the inverted status bar and interactive prompt system.
-- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements the modal logic (Normal, Insert, Command), key dispatching, and the internal command parser.
+- **Editor (`src/editor/`, `include/stitch/editor/`)**: Implements the modal logic (Normal, Insert, Command), key dispatching, and the internal command parser. Supports shell execution via `:! <command>`.
 
 ## Building and Running
 
@@ -39,4 +39,5 @@ The codebase is organized into four primary domains:
 ### Technical Patterns
 - **Resize Handling**: Use `sigaction` with `SA_RESTART` disabled to ensure `read()` is interrupted by `SIGWINCH`, returning `KEY_RESIZE` for instant UI updates.
 - **Rendering**: Use `struct abuf` (append buffer) to batch `write()` calls and prevent screen flicker.
+- **Background Shell Execution**: Uses `fork()` and `waitpid(..., WNOHANG)` to execute shell commands silently in the background, reporting only the final exit status in the command line/message bar to maintain focus and responsiveness.
 - **Memory**: Always check `malloc`/`realloc` results. Free all allocated memory in the appropriate domain destructor or at exit.

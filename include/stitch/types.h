@@ -19,6 +19,7 @@ typedef enum {
 } Mode;
 
 enum EditorKey {
+    KEY_NONE = 0,
     BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
@@ -55,6 +56,9 @@ typedef struct {
     int last_key;
     volatile sig_atomic_t resize_pending;
     struct termios orig_termios;
+
+    /* Background Shell Execution */
+    pid_t shell_pid;
 } EditorConfig;
 
 extern EditorConfig E;

@@ -4,5 +4,6 @@
 #include "../../types.h"
 
 void handleCommand(const char *cmd);
+void editorUpdateShellStatus(void);
 
 #endif

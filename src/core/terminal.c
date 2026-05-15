@@ -8,7 +8,7 @@
 #include "stitch/core/terminal.h"
 #include "stitch/ui/render.h"
 
-EditorConfig E;
+static int raw_mode_active = 0;
 
 void handleSigwinch(int sig) {
     (void)sig;
@@ -23,15 +23,23 @@ void die(const char *s) {
 }
 
 void disableRawMode(void) {
+    if (!raw_mode_active) return;
     /* Leave alternate buffer */
     write(STDOUT_FILENO, "\x1b[?1049l", 8);
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
         die("tcsetattr");
+    raw_mode_active = 0;
 }
 
 void enableRawMode(void) {
+    if (raw_mode_active) return;
     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
-    atexit(disableRawMode);
+    
+    static int atexit_registered = 0;
+    if (!atexit_registered) {
+        atexit(disableRawMode);
+        atexit_registered = 1;
+    }
 
     struct termios raw = E.orig_termios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
@@ -42,6 +50,7 @@ void enableRawMode(void) {
     raw.c_cc[VTIME] = 1;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
+    raw_mode_active = 1;
     
     /* Enter alternate buffer */
     write(STDOUT_FILENO, "\x1b[?1049h", 8);
@@ -56,9 +65,12 @@ void enableRawMode(void) {
 int editorReadKey(void) {
     int nread;
     char c;
-    while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
-        if (nread == -1 && errno == EINTR) return KEY_RESIZE;
-        if (nread == -1 && errno != EAGAIN) die("read");
+    nread = read(STDIN_FILENO, &c, 1);
+    if (nread == 0) return KEY_NONE;
+    if (nread == -1) {
+        if (errno == EINTR) return KEY_RESIZE;
+        if (errno == EAGAIN) return KEY_NONE;
+        die("read");
     }
 
     if (c == '\x1b') {
