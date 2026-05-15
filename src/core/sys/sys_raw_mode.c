@@ -7,7 +7,7 @@ void sys_init_colors(void) {
         init_color(10, 510, 588, 447); /* Sage */
         init_color(11, 765, 478, 404); /* Terra */
         init_color(12, 843, 627, 294); /* Ochre */
-        init_color(13, 184, 165, 157); /* Earth */
+        init_color(13, 80, 100, 130);  /* Midnight (Darker Blue-ish Black) */
         init_color(14, 968, 953, 910); /* Cream */
         
         init_pair(1, 13, 10);
