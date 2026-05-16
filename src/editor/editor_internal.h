@@ -7,6 +7,7 @@
 void handle_normal_mode(StitchState *state, int c);
 void handle_insert_mode(StitchState *state, int c);
 void handle_command_prompt_mode(StitchState *state, int c);
+void handle_visual_mode(StitchState *state, int c);
 
 /* Command components */
 void cmd_save_execute(StitchState *state);

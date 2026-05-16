@@ -9,6 +9,7 @@ void ui_status_bar_draw(StitchState *state) {
     const char *mode_str = " NORMAL ";
     if (state->editor.mode == MODE_INSERT) { mode_pair = 2; mode_str = " INSERT "; }
     else if (state->editor.mode == MODE_COMMAND) { mode_pair = 3; mode_str = " COMMAND "; }
+    else if (state->editor.mode == MODE_VISUAL) { mode_pair = 4; mode_str = " VISUAL "; }
 
     int y = state->view.screen_rows;
     move(y, 0);

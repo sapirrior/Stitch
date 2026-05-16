@@ -74,6 +74,57 @@ static bool find_matching_bracket(StitchState *state, size_t *match_y, size_t *m
     }
 }
 
+static bool get_visual_selection_bytes(StitchState *state, size_t filerow, size_t *start_byte, size_t *end_byte) {
+    if (state->editor.mode != MODE_VISUAL) return false;
+    
+    size_t start_y, end_y, start_x, end_x;
+    if (state->view.cy < state->editor.visual_cy || (state->view.cy == state->editor.visual_cy && state->view.cx < state->editor.visual_cx)) {
+        start_y = state->view.cy;
+        start_x = state->view.cx;
+        end_y = state->editor.visual_cy;
+        end_x = state->editor.visual_cx;
+    } else {
+        start_y = state->editor.visual_cy;
+        start_x = state->editor.visual_cx;
+        end_y = state->view.cy;
+        end_x = state->view.cx;
+    }
+
+    if (filerow < start_y || filerow > end_y) return false;
+
+    Line *line = &state->buffer.lines[filerow];
+    size_t c_start = (filerow == start_y) ? start_x : 0;
+    size_t c_end = (filerow == end_y) ? end_x : line->size;
+
+    int rx_start = get_rx_from_cx(line, c_start);
+    
+    char *rline = line->render;
+    size_t rlen = line->rsize;
+    
+    *start_byte = editorRowColToByte(rline, rlen, rx_start);
+    
+    if (c_end == line->size) {
+        *end_byte = rlen;
+        if (*start_byte == *end_byte) {
+             /* Highlight the newline/end of line visually if it's an empty line or at the end */
+             *end_byte = *start_byte + 1;
+        }
+    } else {
+        size_t next_c = c_end;
+        if (next_c < line->size) {
+            next_c++;
+            while (next_c < line->size && !editorIsUtf8Start((unsigned char)line->chars[next_c])) {
+                next_c++;
+            }
+        }
+        int next_rx = get_rx_from_cx(line, next_c);
+        *end_byte = editorRowColToByte(rline, rlen, next_rx);
+        if (*start_byte == *end_byte) *end_byte = *start_byte + 1; // Fallback
+    }
+    
+    return true;
+}
+
 void ui_text_grid_draw(StitchState *state) {
     int gutter_width = ui_get_gutter_width(state);
     int available_cols = state->view.screen_cols - gutter_width;
@@ -128,16 +179,37 @@ void ui_text_grid_draw(StitchState *state) {
                     }
                 }
             }
+            
+            size_t vis_start_byte = 0, vis_end_byte = 0;
+            bool is_visual = get_visual_selection_bytes(state, filerow, &vis_start_byte, &vis_end_byte);
 
             move(y, gutter_width);
             for (size_t i = 0; i < draw_len; i++) {
-                if (i == hl1_byte || i == hl2_byte) {
+                size_t file_byte_idx = coff + i;
+                bool is_vis_highlight = is_visual && file_byte_idx >= vis_start_byte && file_byte_idx < vis_end_byte;
+                
+                if (is_vis_highlight) {
+                    attron(A_REVERSE);
+                }
+                
+                if (!is_vis_highlight && (i == hl1_byte || i == hl2_byte)) {
                     attron(COLOR_PAIR(2)); /* Terracotta for brackets */
-                    addch(rline[coff + i]);
+                    addch(rline[file_byte_idx]);
                     attroff(COLOR_PAIR(2));
                 } else {
-                    addch(rline[coff + i]);
+                    addch(rline[file_byte_idx]);
                 }
+                
+                if (is_vis_highlight) {
+                    attroff(A_REVERSE);
+                }
+            }
+            
+            /* If visual selection extends past end of line, draw a reverse space to show it */
+            if (is_visual && vis_end_byte > rlen && (coff + draw_len >= rlen)) {
+                attron(A_REVERSE);
+                addch(' ');
+                attroff(A_REVERSE);
             }
         }
     }

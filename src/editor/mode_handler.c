@@ -39,5 +39,7 @@ void editor_process_keypress(StitchState *state) {
         handle_normal_mode(state, c);
     } else if (state->editor.mode == MODE_INSERT) {
         handle_insert_mode(state, c);
+    } else if (state->editor.mode == MODE_VISUAL) {
+        handle_visual_mode(state, c);
     }
 }

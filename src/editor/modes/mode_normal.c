@@ -53,6 +53,27 @@ void handle_normal_mode(StitchState *state, int c) {
             state->editor.mode = MODE_INSERT;
             ui_set_status_message(state, "-- INSERT --");
             break;
+        case 'v':
+            state->editor.mode = MODE_VISUAL;
+            state->editor.visual_cx = state->view.cx;
+            state->editor.visual_cy = state->view.cy;
+            ui_set_status_message(state, "-- VISUAL --");
+            break;
+        case 'p': {
+            size_t len;
+            char *text = sys_clipboard_get(&len);
+            if (text && len > 0) {
+                for (size_t i = 0; i < len; i++) {
+                    if (text[i] == '\n') {
+                        buffer_insert_newline(&state->buffer, &state->view);
+                    } else if (text[i] != '\r') {
+                        buffer_insert_char(&state->buffer, &state->view, text[i]);
+                    }
+                }
+                free(text);
+            }
+            break;
+        }
         case 'u':
             buffer_undo(&state->buffer, &state->view);
             break;

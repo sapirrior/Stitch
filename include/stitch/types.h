@@ -18,7 +18,8 @@
 typedef enum {
     MODE_NORMAL,
     MODE_INSERT,
-    MODE_COMMAND
+    MODE_COMMAND,
+    MODE_VISUAL
 } Mode;
 
 enum EditorKey {
@@ -102,6 +103,8 @@ typedef struct {
     char *search_query;
     char *history[10];
     int history_count;
+    size_t visual_cx;
+    size_t visual_cy;
 } StitchEditor;
 
 typedef struct {
