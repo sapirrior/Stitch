@@ -29,9 +29,11 @@ Every specific behavior is isolated to its own file:
 - `src/buffer/operations/`: Atomic buffer manipulations.
 
 ### Quality of Life (QoL)
-- **Undo/Redo Engine**: Atomic operations (insert, delete, line split, merge) are tracked in a lightweight doubly-linked list (`UndoStack`), bound to `u` and `U` in Normal mode.
-- **Dynamic Line Numbers**: Toggleable via `:number` and `:nonumber`. The gutter width dynamically adjusts based on the file size, maintaining a consistent gap before the text.
-- **Bracket Matching**: Real-time highlighting of matching `()`, `[]`, and `{}` pairs, recursively scanning across multiple lines.
+- **Undo/Redo Engine**: Atomic operations are tracked in a lightweight doubly-linked list, bound to `u` and `U`.
+- **Dynamic Line Numbers**: Toggleable via `:number` and `:nonumber`.
+- **Help Overlay**: Accessible via `:h` or `:help`. Displays a clean, structured guide to core keybindings, dismissed with `Esc`.
+- **Mouse Support**: Basic click-to-move support for intuitive cursor positioning within the text grid.
+- **Bracket Matching**: Real-time highlighting of matching `()`, `[]`, and `{}` pairs.
 - **Mode Switching**: The `escdelay` is minimized to 50ms to ensure instantaneous transitions between Insert and Normal modes.
 
 ## Building and Running
