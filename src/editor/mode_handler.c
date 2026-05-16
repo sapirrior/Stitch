@@ -23,6 +23,18 @@ void editor_process_keypress(StitchState *state) {
         return;
     }
 
+    if (c == KEY_MOUSE) {
+        MEVENT event;
+        if (getmouse(&event) == OK) {
+            if (event.bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
+                if (event.y < state->view.screen_rows) {
+                    ui_screen_to_buffer(state, event.y, event.x, &state->view.cy, &state->view.cx);
+                }
+            }
+        }
+        return;
+    }
+
     if (state->editor.mode == MODE_NORMAL) {
         handle_normal_mode(state, c);
     } else if (state->editor.mode == MODE_INSERT) {

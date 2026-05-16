@@ -89,3 +89,26 @@ void ui_handle_resize(StitchState *state) {
     if (state->view.screen_rows < 0) state->view.screen_rows = 0;
     touchwin(stdscr);
 }
+
+void ui_screen_to_buffer(StitchState *state, int screen_y, int screen_x, size_t *out_cy, size_t *out_cx) {
+    int gutter_width = ui_get_gutter_width(state);
+    
+    /* Calculate Buffer Line */
+    size_t target_cy = screen_y + state->view.row_off;
+    if (target_cy >= state->buffer.num_lines) {
+        *out_cy = state->buffer.num_lines > 0 ? state->buffer.num_lines - 1 : 0;
+    } else {
+        *out_cy = target_cy;
+    }
+
+    /* Calculate Buffer Column */
+    int target_rx = screen_x - gutter_width + (int)state->view.col_off;
+    if (target_rx < 0) target_rx = 0;
+
+    if (*out_cy < state->buffer.num_lines) {
+        Line *line = &state->buffer.lines[*out_cy];
+        *out_cx = editorRowColToByte(line->chars, (int)line->size, target_rx);
+    } else {
+        *out_cx = 0;
+    }
+}

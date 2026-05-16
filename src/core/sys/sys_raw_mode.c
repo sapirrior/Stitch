@@ -37,6 +37,7 @@ void sys_init_ncurses(StitchState *state) {
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
     set_escdelay(50);
+    mousemask(BUTTON1_CLICKED | BUTTON1_PRESSED, NULL);
     start_color();
     sys_init_colors();
     (void)state;

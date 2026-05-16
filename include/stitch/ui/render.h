@@ -13,5 +13,6 @@
 void ui_refresh_screen(StitchState *state);
 void ui_set_status_message(StitchState *state, const char *fmt, ...);
 void ui_handle_resize(StitchState *state);
+void ui_screen_to_buffer(StitchState *state, int screen_y, int screen_x, size_t *out_cy, size_t *out_cx);
 
 #endif
