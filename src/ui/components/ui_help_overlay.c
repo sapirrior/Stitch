@@ -70,7 +70,7 @@ void ui_help_overlay_draw(StitchState *state) {
     help_print_line(start_y, start_x, rows, 20, "  :w / :q / :wq   - Save / Quit / Save-Quit", false);
 
     /* Draw dismiss instruction at the bottom */
-    const char *dismiss_msg = "[ Press any key to close ]";
+    const char *dismiss_msg = "[ Press Esc to close ]";
     int msg_len = (int)strlen(dismiss_msg);
     if (msg_len < width - 2 && start_y + height - 1 < state->view.screen_rows) {
         move(start_y + height - 1, start_x + (width - msg_len) / 2);

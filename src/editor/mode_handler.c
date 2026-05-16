@@ -12,7 +12,7 @@ void editor_process_keypress(StitchState *state) {
     if (state->ui.show_help_overlay) {
         if (c == STITCH_KEY_RESIZE) {
             ui_handle_resize(state);
-        } else {
+        } else if (c == '\x1b') {
             state->ui.show_help_overlay = false;
         }
         return;
