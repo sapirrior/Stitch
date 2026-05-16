@@ -14,6 +14,8 @@ void handle_insert_mode(StitchState *state, int c) {
         editor_move_cursor(state, c);
     } else if (c == '\r') {
         buffer_insert_newline(&state->buffer, &state->view);
+    } else if (c == '\t') {
+        buffer_insert_char(&state->buffer, &state->view, '\t');
     } else if (!iscntrl(c)) {
         buffer_insert_char(&state->buffer, &state->view, c);
     }

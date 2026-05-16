@@ -13,7 +13,7 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define STITCH_VERSION "0.1.0"
-#define STITCH_TAB_STOP 8
+#define STITCH_TAB_STOP 4
 
 typedef enum {
     MODE_NORMAL,
