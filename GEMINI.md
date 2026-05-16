@@ -29,7 +29,7 @@ Every specific behavior is isolated to its own file:
 - `src/buffer/operations/`: Atomic buffer manipulations.
 
 ### Quality of Life (QoL)
-- **Undo/Redo Engine**: Atomic operations are tracked in a lightweight doubly-linked list, bound to `u` and `U`.
+- **Smart Undo/Redo Engine**: Atomic operations are grouped intelligently (e.g., contiguous typing is grouped by words, and contiguous deletions form a single block). Bound to `u` and `U`.
 - **Visual Mode**: Accessible via `v`. Allows selecting blocks of text to delete (`d`/`x`). Yanking (`y`) is currently disabled. Supports multi-line selections and reverse-video highlighting.
 - **Stabilization Audit (v0.1.1)**: Comprehensive hardening of memory management, UTF-8 safety, and atomic buffer operations.
 - **Dynamic Line Numbers**: Toggleable via `:number` and `:nonumber`.

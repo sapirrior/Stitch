@@ -64,6 +64,7 @@ typedef struct UndoAction {
     int c;
     char *text;
     size_t len;
+    unsigned int group_id;
     struct UndoAction *prev;
     struct UndoAction *next;
 } UndoAction;
