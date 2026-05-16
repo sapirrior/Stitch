@@ -30,8 +30,7 @@ Every specific behavior is isolated to its own file:
 
 ### Quality of Life (QoL)
 - **Undo/Redo Engine**: Atomic operations are tracked in a lightweight doubly-linked list, bound to `u` and `U`.
-- **Visual Mode**: Accessible via `v`. Allows selecting blocks of text to yank (`y`) or delete (`d`/`x`). Supports multi-line selections and reverse-video highlighting.
-- **OS Clipboard Integration**: Seamlessly syncs yanked and deleted text with the system clipboard (supports `termux-clipboard`, `pbcopy`, `xclip`, `xsel`). Paste using `p`.
+- **Visual Mode**: Accessible via `v`. Allows selecting blocks of text to delete (`d`/`x`). Yanking (`y`) is currently disabled. Supports multi-line selections and reverse-video highlighting.
 - **Stabilization Audit (v0.1.1)**: Comprehensive hardening of memory management, UTF-8 safety, and atomic buffer operations.
 - **Dynamic Line Numbers**: Toggleable via `:number` and `:nonumber`.
 - **Help Overlay**: Accessible via `:h` or `:help`. Displays a clean, structured guide to core keybindings, dismissed with `Esc`.
