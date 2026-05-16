@@ -30,6 +30,7 @@ Every specific behavior is isolated to its own file:
 
 ### Quality of Life (QoL)
 - **Undo/Redo Engine**: Atomic operations are tracked in a lightweight doubly-linked list, bound to `u` and `U`.
+- **Stabilization Audit (v0.1.1)**: Comprehensive hardening of memory management, UTF-8 safety, and atomic buffer operations.
 - **Dynamic Line Numbers**: Toggleable via `:number` and `:nonumber`.
 - **Help Overlay**: Accessible via `:h` or `:help`. Displays a clean, structured guide to core keybindings, dismissed with `Esc`.
 - **Mouse Support**: Basic click-to-move support for intuitive cursor positioning within the text grid.
