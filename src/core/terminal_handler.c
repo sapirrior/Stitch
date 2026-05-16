@@ -8,13 +8,24 @@ void core_enable_raw_mode(StitchState *state) {
 }
 
 void core_disable_raw_mode(void) {
+    /* Re-enable Bracketed Paste Mode on exit so shell continues to behave correctly */
+    printf("\x1b[?2004h");
+    fflush(stdout);
     endwin();
 }
 
 int core_read_key(StitchState *state) {
     (void)state;
+    static int last_c = 0;
     int c = getch();
     if (c == ERR) return STITCH_KEY_NONE;
+    
+    if (c == '\n' && last_c == '\r') {
+        last_c = c;
+        return STITCH_KEY_NONE;
+    }
+    last_c = c;
+
     if (c == KEY_ENTER || c == '\n' || c == '\r') return '\r';
     if (c == 127 || c == KEY_BACKSPACE) return STITCH_BACKSPACE;
     if (c < 32) return c;

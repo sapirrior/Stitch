@@ -40,5 +40,10 @@ void sys_init_ncurses(StitchState *state) {
     mousemask(BUTTON1_CLICKED | BUTTON1_PRESSED, NULL);
     start_color();
     sys_init_colors();
+    
+    /* Disable Bracketed Paste Mode on startup so terminal pasted text isn't intercepted as Escape sequences */
+    printf("\x1b[?2004l");
+    fflush(stdout);
+    
     (void)state;
 }
