@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    ui_set_status_message(&app, "HELP: :q = quit | i = insert | / = search");
+    ui_set_status_message(&app, ":h for help");
 
     while (1) {
         if (app.core.shell_pid != -1) editor_update_shell_status(&app);
