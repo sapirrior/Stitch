@@ -39,25 +39,20 @@ static void delete_visual_block(StitchState *state, size_t sy, size_t sx, size_t
         }
     }
 
-    while (true) {
-        if (state->view.cy < sy || (state->view.cy == sy && state->view.cx <= sx)) break;
-        
-        if (state->view.cx > 0) {
-            state->view.cx--;
-            Line *line = &state->buffer.lines[state->view.cy];
-            while (state->view.cx > 0 && !editorIsUtf8Start((unsigned char)line->chars[state->view.cx])) {
-                state->view.cx--;
-            }
-        } else {
-            state->view.cy--;
-            state->view.cx = state->buffer.lines[state->view.cy].size;
-        }
-
+    while (state->view.cy > sy || (state->view.cy == sy && state->view.cx > sx)) {
         buffer_del_char(&state->buffer, &state->view);
     }
     
-    state->view.cy = sy;
-    state->view.cx = sx;
+    if (state->view.cy >= state->buffer.num_lines) {
+        state->view.cy = state->buffer.num_lines > 0 ? state->buffer.num_lines - 1 : 0;
+    }
+    if (state->buffer.num_lines > 0) {
+        if (state->view.cx > state->buffer.lines[state->view.cy].size) {
+            state->view.cx = state->buffer.lines[state->view.cy].size;
+        }
+    } else {
+        state->view.cx = 0;
+    }
 }
 
 void handle_visual_mode(StitchState *state, int c) {
