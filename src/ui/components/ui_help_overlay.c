@@ -19,7 +19,7 @@ void ui_help_overlay_draw(StitchState *state) {
     if (!state->ui.show_help_overlay) return;
 
     int width = 54;
-    int height = 23;
+    int height = 24;
     
     int start_y = (state->view.screen_rows - height) / 2;
     if (start_y < 0) start_y = 0;
@@ -68,7 +68,8 @@ void ui_help_overlay_draw(StitchState *state) {
 
     help_print_line(start_y, start_x, rows, 19, "COMMANDS", true);
     help_print_line(start_y, start_x, rows, 20, "  :h / :help      - Show this help menu", false);
-    help_print_line(start_y, start_x, rows, 21, "  :w / :q / :wq   - Save / Quit / Save-Quit", false);
+    help_print_line(start_y, start_x, rows, 21, "  :nu / :nonu     - Line Numbers (On / Off)", false);
+    help_print_line(start_y, start_x, rows, 22, "  :w / :q / :wq   - Save / Quit / Save-Quit", false);
 
     /* Draw dismiss instruction at the bottom */
     const char *dismiss_msg = "[ Press Esc to close ]";
