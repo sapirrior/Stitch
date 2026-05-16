@@ -20,43 +20,6 @@ static void get_visual_bounds(StitchState *state, size_t *sy, size_t *sx, size_t
     }
 }
 
-static char *extract_visual_text(StitchState *state, size_t sy, size_t sx, size_t ey, size_t ex, size_t *out_len) {
-    size_t cap = 256;
-    size_t len = 0;
-    char *buf = editorMalloc(cap);
-
-    for (size_t y = sy; y <= ey && y < state->buffer.num_lines; y++) {
-        Line *line = &state->buffer.lines[y];
-        size_t c_start = (y == sy) ? sx : 0;
-        size_t c_end = (y == ey) ? ex : line->size;
-        
-        size_t next_c = c_end;
-        if (next_c < line->size) {
-            next_c++;
-            while (next_c < line->size && !editorIsUtf8Start((unsigned char)line->chars[next_c])) {
-                next_c++;
-            }
-        }
-
-        size_t chunk = next_c - c_start;
-        if (len + chunk + 2 > cap) {
-            cap = len + chunk + 256;
-            buf = editorRealloc(buf, cap);
-        }
-        if (chunk > 0) {
-            memcpy(buf + len, &line->chars[c_start], chunk);
-            len += chunk;
-        }
-        
-        if (y < ey || (y == ey && ex == line->size && y < state->buffer.num_lines - 1)) {
-            buf[len++] = '\n';
-        }
-    }
-    buf[len] = '\0';
-    *out_len = len;
-    return buf;
-}
-
 static void delete_visual_block(StitchState *state, size_t sy, size_t sx, size_t ey, size_t ex) {
     state->view.cy = ey;
     state->view.cx = ex;
@@ -99,8 +62,6 @@ static void delete_visual_block(StitchState *state, size_t sy, size_t sx, size_t
 
 void handle_visual_mode(StitchState *state, int c) {
     size_t sy, sx, ey, ex;
-    size_t len;
-    char *text;
 
     switch (c) {
         case '\x1b':
@@ -139,19 +100,12 @@ void handle_visual_mode(StitchState *state, int c) {
             state->view.cx = 0;
             break;
         case 'y':
-            get_visual_bounds(state, &sy, &sx, &ey, &ex);
-            text = extract_visual_text(state, sy, sx, ey, ex, &len);
-            sys_clipboard_set(text, len);
-            free(text);
             state->editor.mode = MODE_NORMAL;
-            ui_set_status_message(state, "%zu bytes yanked", len);
+            ui_set_status_message(state, "Yank temporarily disabled");
             break;
         case 'd':
         case 'x':
             get_visual_bounds(state, &sy, &sx, &ey, &ex);
-            text = extract_visual_text(state, sy, sx, ey, ex, &len);
-            sys_clipboard_set(text, len);
-            free(text);
             delete_visual_block(state, sy, sx, ey, ex);
             state->editor.mode = MODE_NORMAL;
             ui_set_status_message(state, "");

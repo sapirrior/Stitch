@@ -20,8 +20,4 @@ void *editorRealloc(void *ptr, size_t size);
 char *editorStrdup(const char *s);
 char *editorStrcasestr(const char *haystack, const char *needle);
 
-/* OS Clipboard */
-void sys_clipboard_set(const char *text, size_t len);
-char *sys_clipboard_get(size_t *len);
-
 #endif
