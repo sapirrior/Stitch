@@ -94,6 +94,17 @@ void handle_visual_mode(StitchState *state, int c) {
             }
             state->view.cx = 0;
             break;
+        case '%':
+            state->editor.visual_cy = 0;
+            state->editor.visual_cx = 0;
+            if (state->buffer.num_lines > 0) {
+                state->view.cy = state->buffer.num_lines - 1;
+                state->view.cx = state->buffer.lines[state->view.cy].size;
+            } else {
+                state->view.cy = 0;
+                state->view.cx = 0;
+            }
+            break;
         case 'y':
             state->editor.mode = MODE_NORMAL;
             ui_set_status_message(state, "Yank temporarily disabled");
