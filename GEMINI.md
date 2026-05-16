@@ -1,5 +1,8 @@
 # Stitch: Minimalist Modal Editor
 
+## Core Philosophy (DO NOT DELETE)
+The ultimate goal of Stitch is to be a **"gentle modal text editor"**. It is designed to be simple, minimal, yet powerful enough for most daily tasks. Inspired heavily by the approachability of GNU Nano, it provides a clean interface and straightforward workflow. Stitch explicitly avoids the goal of becoming a hyper-complex, omnipotent environment like Vim or Neovim. It is not meant to be everything to everyone; rather, it provides exactly what is needed for fast, focused text editing without the bloat.
+
 Stitch is a C11 modal text editor that combines Nano's clean bottom-bar aesthetic with Vim's modal efficiency. It follows a strictly modular, component-based architecture to ensure industry-standard maintainability and scalability.
 
 ## Architecture
