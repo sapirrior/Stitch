@@ -10,9 +10,6 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
     static ssize_t last_match = -1;
     static int direction = 1;
 
-    free(state->editor.search_query);
-    state->editor.search_query = NULL;
-
     if (key == '\r' || key == '\x1b') {
         last_match = -1;
         direction = 1;
@@ -26,11 +23,18 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
         direction = 1;
     }
 
-    if (query[0] == '\0') return;
-    state->editor.search_query = editorStrdup(query);
+    if (query[0] == '\0') {
+        free(state->editor.search_query);
+        state->editor.search_query = NULL;
+        return;
+    }
+    
+    char *new_query = editorStrdup(query);
+    free(state->editor.search_query);
+    state->editor.search_query = new_query;
 
-    int total_matches = 0;
-    int current_match_idx = -1;
+    size_t total_matches = 0;
+    size_t current_match_idx = 0;
 
     for (size_t i = 0; i < state->buffer.num_lines; i++) {
         char *line_ptr = state->buffer.lines[i].render;
@@ -41,26 +45,33 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
     }
 
     ssize_t current = last_match;
-    if (current >= (ssize_t)state->buffer.num_lines) current = -1;
 
     for (size_t i = 0; i < state->buffer.num_lines; i++) {
         current += direction;
         if (current < 0) current = (ssize_t)state->buffer.num_lines - 1;
         else if (current >= (ssize_t)state->buffer.num_lines) current = 0;
 
-        if (current < 0 || state->buffer.lines[current].render == NULL) continue;
+        if (current < 0) break;
+        
         char *match = editorStrcasestr(state->buffer.lines[current].render, query);
         if (match) {
             last_match = current;
-            state->view.cy = (int)current;
+            state->view.cy = (size_t)current;
             state->view.cx = 0;
             if (state->buffer.lines[current].chars) {
                 char *chars_match = editorStrcasestr(state->buffer.lines[current].chars, query);
-                if (chars_match) state->view.cx = (int)(chars_match - state->buffer.lines[current].chars);
+                if (chars_match) state->view.cx = (size_t)(chars_match - state->buffer.lines[current].chars);
             }
-            state->view.row_off = (int)state->buffer.num_lines;
+            
+            /* Center the match if it's outside the view */
+            if (state->view.cy < state->view.row_off || state->view.cy >= state->view.row_off + state->view.screen_rows) {
+                if (state->view.cy > (size_t)state->view.screen_rows / 2)
+                    state->view.row_off = state->view.cy - state->view.screen_rows / 2;
+                else
+                    state->view.row_off = 0;
+            }
 
-            int found_count = 0;
+            size_t found_count = 0;
             for (ssize_t j = 0; j <= current; j++) {
                 char *lp = state->buffer.lines[j].render;
                 while (lp && (lp = editorStrcasestr(lp, query)) != NULL) {
@@ -74,7 +85,7 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
     }
 
     if (total_matches > 0) {
-        ui_set_status_message(state, "Match %d of %d (Arrows to navigate)", 
+        ui_set_status_message(state, "Match %zu of %zu (Arrows to navigate)", 
                                current_match_idx > 0 ? current_match_idx : 1, 
                                total_matches);
     } else {
@@ -83,10 +94,10 @@ static void editor_find_callback(StitchState *state, char *query, int key) {
 }
 
 void cmd_search_execute(StitchState *state) {
-    int saved_cx = state->view.cx;
-    int saved_cy = state->view.cy;
-    int saved_col_off = state->view.col_off;
-    int saved_row_off = state->view.row_off;
+    size_t saved_cx = state->view.cx;
+    size_t saved_cy = state->view.cy;
+    size_t saved_col_off = state->view.col_off;
+    size_t saved_row_off = state->view.row_off;
 
     char *query = ui_prompt(state, "Search: %s (Use Arrows/Enter/Esc)",
                                editor_find_callback);

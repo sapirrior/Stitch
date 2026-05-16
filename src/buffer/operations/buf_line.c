@@ -13,21 +13,27 @@ void buffer_update_line(Line *line) {
         else if (c < 32 || c == 127) nonprint++;
     }
 
-    size_t needed = line->size + tabs * (STITCH_TAB_STOP - 1) + nonprint + 1;
+    /* Check for potential overflow in needed calculation */
+    size_t tab_extra = tabs * (STITCH_TAB_STOP - 1);
+    if (tabs > 0 && tab_extra / tabs != (STITCH_TAB_STOP - 1)) tab_extra = 0; // Overflow safety
+
+    size_t needed = line->size + tab_extra + nonprint + 1;
     if (needed > line->rcapacity) {
         line->rcapacity = needed;
         line->render = editorRealloc(line->render, line->rcapacity);
     }
 
     size_t idx = 0;
-    for (size_t j = 0; j < line->size; j++) {
+    for (size_t j = 0; j < line->size && idx + 1 < line->rcapacity; j++) {
         unsigned char c = (unsigned char)line->chars[j];
         if (c == '\t') {
             line->render[idx++] = ' ';
-            while (idx % STITCH_TAB_STOP != 0) line->render[idx++] = ' ';
+            while (idx % STITCH_TAB_STOP != 0 && idx + 1 < line->rcapacity) line->render[idx++] = ' ';
         } else if (c < 32 || c == 127) {
-            line->render[idx++] = '^';
-            line->render[idx++] = (c <= 26) ? '@' + c : '?';
+            if (idx + 2 < line->rcapacity) {
+                line->render[idx++] = '^';
+                line->render[idx++] = (c <= 26) ? '@' + c : '?';
+            }
         } else {
             line->render[idx++] = c;
         }

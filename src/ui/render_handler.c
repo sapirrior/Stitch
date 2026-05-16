@@ -22,6 +22,7 @@ void ui_update_viewport(StitchState *state) {
     int gutter_width = ui_get_gutter_width(state);
     int available_cols = state->view.screen_cols - gutter_width;
     if (available_cols < 1) available_cols = 1;
+    if (state->view.screen_rows < 1) state->view.screen_rows = 1;
 
     state->view.rx = 0;
     if (state->view.cy < state->buffer.num_lines) {
@@ -46,7 +47,8 @@ void ui_update_viewport(StitchState *state) {
         state->view.row_off = (state->view.cy < (size_t)margin_y) ? 0 : state->view.cy - (size_t)margin_y;
     }
     if (state->view.cy >= state->view.row_off + (size_t)state->view.screen_rows - (size_t)margin_y) {
-        state->view.row_off = state->view.cy - (size_t)state->view.screen_rows + (size_t)margin_y + 1;
+        state->view.row_off = (state->view.cy + (size_t)margin_y + 1 > (size_t)state->view.screen_rows) ? 
+                              state->view.cy - (size_t)state->view.screen_rows + (size_t)margin_y + 1 : 0;
     }
 
     /* Horizontal Scroll Margins (sidescrolloff) */
@@ -57,7 +59,8 @@ void ui_update_viewport(StitchState *state) {
         state->view.col_off = (state->view.rx < (size_t)margin_x) ? 0 : state->view.rx - (size_t)margin_x;
     }
     if (state->view.rx >= state->view.col_off + (size_t)available_cols - (size_t)margin_x) {
-        state->view.col_off = state->view.rx - (size_t)available_cols + (size_t)margin_x + 1;
+        state->view.col_off = (state->view.rx + (size_t)margin_x + 1 > (size_t)available_cols) ?
+                              state->view.rx - (size_t)available_cols + (size_t)margin_x + 1 : 0;
     }
 }
 
@@ -72,11 +75,21 @@ void ui_refresh_screen(StitchState *state) {
 
     /* Position cursor */
     if (state->editor.mode == MODE_COMMAND) {
-        int msg_cols = editorRowByteToCol(state->ui.status_msg, (int)strlen(state->ui.status_msg), (int)strlen(state->ui.status_msg));
-        move(state->view.screen_rows + 1, msg_cols);
+        size_t msg_len = strlen(state->ui.status_msg);
+        size_t msg_cols = editorRowByteToCol(state->ui.status_msg, msg_len, msg_len);
+        move(state->view.screen_rows + 1, (int)msg_cols);
     } else {
         int gutter_width = ui_get_gutter_width(state);
-        move((int)(state->view.cy - state->view.row_off), (int)(state->view.rx - state->view.col_off) + gutter_width);
+        int cursor_y = (int)(state->view.cy - state->view.row_off);
+        int cursor_x = (int)(state->view.rx - state->view.col_off) + gutter_width;
+        
+        /* Ensure cursor stays within screen bounds */
+        if (cursor_y < 0) cursor_y = 0;
+        if (cursor_y > state->view.screen_rows) cursor_y = state->view.screen_rows;
+        if (cursor_x < gutter_width) cursor_x = gutter_width;
+        if (cursor_x >= state->view.screen_cols) cursor_x = state->view.screen_cols - 1;
+        
+        move(cursor_y, cursor_x);
     }
 
     wnoutrefresh(stdscr);

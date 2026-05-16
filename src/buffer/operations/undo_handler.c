@@ -58,19 +58,25 @@ void buffer_undo(StitchBuffer *buf, StitchView *view) {
 
     switch (action->type) {
         case UNDO_INSERT_CHAR:
-            buffer_row_del_char(buf, &buf->lines[action->cy], action->cx);
-            view->cy = action->cy;
-            view->cx = action->cx;
+            if (action->cy < buf->num_lines) {
+                buffer_row_del_char(buf, &buf->lines[action->cy], action->cx);
+                view->cy = action->cy;
+                view->cx = action->cx;
+            }
             break;
         case UNDO_DELETE_CHAR:
-            buffer_row_insert_char(buf, &buf->lines[action->cy], action->cx, action->c);
-            view->cy = action->cy;
-            view->cx = action->cx + 1;
+            if (action->cy < buf->num_lines) {
+                buffer_row_insert_char(buf, &buf->lines[action->cy], action->cx, action->c);
+                view->cy = action->cy;
+                view->cx = action->cx + 1;
+            }
             break;
         case UNDO_INSERT_LINE:
-            buffer_del_line(buf, action->cy);
-            view->cy = action->cy > 0 ? action->cy - 1 : 0;
-            view->cx = buf->num_lines > 0 ? buf->lines[view->cy].size : 0;
+            if (action->cy < buf->num_lines) {
+                buffer_del_line(buf, action->cy);
+                view->cy = action->cy > 0 ? action->cy - 1 : 0;
+                view->cx = (buf->num_lines > 0 && view->cy < buf->num_lines) ? buf->lines[view->cy].size : 0;
+            }
             break;
         case UNDO_DELETE_LINE:
             buffer_insert_line(buf, action->cy, action->text, action->len);
@@ -78,23 +84,22 @@ void buffer_undo(StitchBuffer *buf, StitchView *view) {
             view->cx = 0;
             break;
         case UNDO_MERGE_LINE:
-            /* cy is the line that was deleted and merged into cy-1 at cx */
-            /* We split cy-1 at cx, and insert a new line cy */
-            {
+            if (action->cy < buf->num_lines && action->cy > 0) {
                 Line *prev_line = &buf->lines[action->cy - 1];
-                buffer_insert_line(buf, action->cy, &prev_line->chars[action->cx], prev_line->size - action->cx);
-                prev_line = &buf->lines[action->cy - 1];
-                prev_line->size = action->cx;
-                prev_line->chars[prev_line->size] = '\0';
-                buffer_update_line(prev_line);
-                view->cy = action->cy;
-                view->cx = 0;
+                if (action->cx <= prev_line->size) {
+                    buffer_insert_line(buf, action->cy, &prev_line->chars[action->cx], prev_line->size - action->cx);
+                    /* Re-fetch after potential realloc */
+                    prev_line = &buf->lines[action->cy - 1];
+                    prev_line->size = action->cx;
+                    prev_line->chars[prev_line->size] = '\0';
+                    buffer_update_line(prev_line);
+                    view->cy = action->cy;
+                    view->cx = 0;
+                }
             }
             break;
         case UNDO_SPLIT_LINE:
-            /* cy was split at cx, text went to cy+1 */
-            /* We append cy+1 to cy, and delete cy+1 */
-            {
+            if (action->cy + 1 < buf->num_lines) {
                 Line *line1 = &buf->lines[action->cy];
                 Line *line2 = &buf->lines[action->cy + 1];
                 size_t needed = line1->size + line2->size + 1;
@@ -102,6 +107,9 @@ void buffer_undo(StitchBuffer *buf, StitchView *view) {
                     line1->capacity = needed;
                     line1->chars = editorRealloc(line1->chars, line1->capacity);
                 }
+                /* Re-fetch after potential realloc */
+                line1 = &buf->lines[action->cy];
+                line2 = &buf->lines[action->cy + 1];
                 memcpy(&line1->chars[line1->size], line2->chars, line2->size);
                 line1->size += line2->size;
                 line1->chars[line1->size] = '\0';
@@ -130,14 +138,18 @@ void buffer_redo(StitchBuffer *buf, StitchView *view) {
 
     switch (action->type) {
         case UNDO_INSERT_CHAR:
-            buffer_row_insert_char(buf, &buf->lines[action->cy], action->cx, action->c);
-            view->cy = action->cy;
-            view->cx = action->cx + 1;
+            if (action->cy < buf->num_lines) {
+                buffer_row_insert_char(buf, &buf->lines[action->cy], action->cx, action->c);
+                view->cy = action->cy;
+                view->cx = action->cx + 1;
+            }
             break;
         case UNDO_DELETE_CHAR:
-            buffer_row_del_char(buf, &buf->lines[action->cy], action->cx);
-            view->cy = action->cy;
-            view->cx = action->cx;
+            if (action->cy < buf->num_lines) {
+                buffer_row_del_char(buf, &buf->lines[action->cy], action->cx);
+                view->cy = action->cy;
+                view->cx = action->cx;
+            }
             break;
         case UNDO_INSERT_LINE:
             buffer_insert_line(buf, action->cy, "", 0);
@@ -145,13 +157,14 @@ void buffer_redo(StitchBuffer *buf, StitchView *view) {
             view->cx = 0;
             break;
         case UNDO_DELETE_LINE:
-            buffer_del_line(buf, action->cy);
-            view->cy = action->cy > 0 ? action->cy - 1 : 0;
-            view->cx = buf->num_lines > 0 ? buf->lines[view->cy].size : 0;
+            if (action->cy < buf->num_lines) {
+                buffer_del_line(buf, action->cy);
+                view->cy = action->cy > 0 ? action->cy - 1 : 0;
+                view->cx = (buf->num_lines > 0 && view->cy < buf->num_lines) ? buf->lines[view->cy].size : 0;
+            }
             break;
         case UNDO_MERGE_LINE:
-            /* Same as doing backspace at cy, 0 */
-            {
+            if (action->cy < buf->num_lines && action->cy > 0) {
                 Line *line1 = &buf->lines[action->cy - 1];
                 Line *line2 = &buf->lines[action->cy];
                 size_t needed = line1->size + line2->size + 1;
@@ -159,6 +172,9 @@ void buffer_redo(StitchBuffer *buf, StitchView *view) {
                     line1->capacity = needed;
                     line1->chars = editorRealloc(line1->chars, line1->capacity);
                 }
+                /* Re-fetch after potential realloc */
+                line1 = &buf->lines[action->cy - 1];
+                line2 = &buf->lines[action->cy];
                 memcpy(&line1->chars[line1->size], line2->chars, line2->size);
                 line1->size += line2->size;
                 line1->chars[line1->size] = '\0';
@@ -169,16 +185,18 @@ void buffer_redo(StitchBuffer *buf, StitchView *view) {
             }
             break;
         case UNDO_SPLIT_LINE:
-            /* Same as pressing enter at cy, cx */
-            {
+            if (action->cy < buf->num_lines) {
                 Line *line = &buf->lines[action->cy];
-                buffer_insert_line(buf, action->cy + 1, &line->chars[action->cx], line->size - action->cx);
-                line = &buf->lines[action->cy];
-                line->size = action->cx;
-                line->chars[line->size] = '\0';
-                buffer_update_line(line);
-                view->cy = action->cy + 1;
-                view->cx = 0;
+                if (action->cx <= line->size) {
+                    buffer_insert_line(buf, action->cy + 1, &line->chars[action->cx], line->size - action->cx);
+                    /* Re-fetch after potential realloc */
+                    line = &buf->lines[action->cy];
+                    line->size = action->cx;
+                    line->chars[line->size] = '\0';
+                    buffer_update_line(line);
+                    view->cy = action->cy + 1;
+                    view->cx = 0;
+                }
             }
             break;
     }

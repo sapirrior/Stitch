@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "stitch/types.h"
+#include "stitch/core/terminal.h"
 #include "stitch/buffer/engine.h"
 #include "stitch/ui/render.h"
 #include "stitch/ui/prompt.h"
@@ -96,9 +97,16 @@ void handle_normal_mode(StitchState *state, int c) {
             state->view.cx = 0;
             break;
         case 'x':
-            if (state->view.cy < state->buffer.num_lines && state->view.cx < state->buffer.lines[state->view.cy].size) {
-                state->view.cx++;
-                buffer_del_char(&state->buffer, &state->view);
+            if (state->view.cy < state->buffer.num_lines) {
+                Line *line = &state->buffer.lines[state->view.cy];
+                if (state->view.cx < line->size) {
+                    /* Move cx to the start of the next character */
+                    state->view.cx++;
+                    while (state->view.cx < line->size && !editorIsUtf8Start((unsigned char)line->chars[state->view.cx])) {
+                        state->view.cx++;
+                    }
+                    buffer_del_char(&state->buffer, &state->view);
+                }
             }
             break;
         case 'd':

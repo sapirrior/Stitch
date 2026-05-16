@@ -12,8 +12,8 @@ int core_is_utf8_start(unsigned char c);
 
 /* Compat / Shared Utils */
 int editorIsUtf8Start(unsigned char c);
-int editorRowByteToCol(const char *s, int len, int target_byte);
-int editorRowColToByte(const char *s, int len, int target_col);
+size_t editorRowByteToCol(const char *s, size_t len, size_t target_byte);
+size_t editorRowColToByte(const char *s, size_t len, size_t target_col);
 
 void *editorMalloc(size_t size);
 void *editorRealloc(void *ptr, size_t size);

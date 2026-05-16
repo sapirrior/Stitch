@@ -76,6 +76,8 @@ static bool find_matching_bracket(StitchState *state, size_t *match_y, size_t *m
 
 void ui_text_grid_draw(StitchState *state) {
     int gutter_width = ui_get_gutter_width(state);
+    int available_cols = state->view.screen_cols - gutter_width;
+    if (available_cols < 0) available_cols = 0;
     
     size_t match_y = 0, match_x = 0;
     bool has_match = find_matching_bracket(state, &match_y, &match_x);
@@ -98,39 +100,44 @@ void ui_text_grid_draw(StitchState *state) {
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
                     "Stitch editor -- version %s", STITCH_VERSION);
-                if (welcomelen > state->view.screen_cols - gutter_width) welcomelen = state->view.screen_cols - gutter_width;
-                int x = gutter_width + (state->view.screen_cols - gutter_width - welcomelen) / 2;
+                if (welcomelen > available_cols) welcomelen = available_cols;
+                int x = gutter_width + (available_cols - welcomelen) / 2;
+                if (x < gutter_width) x = gutter_width;
                 mvaddnstr(y, x, welcome, welcomelen);
             }
         } else {
-            int rlen = state->buffer.lines[filerow].rsize;
+            size_t rlen = state->buffer.lines[filerow].rsize;
             char *rline = state->buffer.lines[filerow].render;
 
-            int coff = editorRowColToByte(rline, rlen, state->view.col_off);
-            int draw_len = editorRowColToByte(&rline[coff], rlen - coff, state->view.screen_cols - gutter_width);
+            size_t coff = editorRowColToByte(rline, rlen, state->view.col_off);
+            size_t draw_len = editorRowColToByte(&rline[coff], rlen - coff, (size_t)available_cols);
 
-            int hl1_byte = -1;
-            int hl2_byte = -1;
+            size_t hl1_byte = (size_t)-1;
+            size_t hl2_byte = (size_t)-1;
             if (has_match) {
                 if (filerow == state->view.cy) {
                     int rx = get_rx_from_cx(&state->buffer.lines[filerow], state->view.cx);
-                    if (rx >= (int)state->view.col_off && rx < (int)state->view.col_off + (state->view.screen_cols - gutter_width)) {
-                        hl1_byte = editorRowColToByte(rline, rlen, rx) - coff;
+                    if (rx >= (int)state->view.col_off && rx < (int)state->view.col_off + available_cols) {
+                        hl1_byte = editorRowColToByte(rline, rlen, (size_t)rx) - coff;
                     }
                 }
                 if (filerow == match_y) {
                     int rx = get_rx_from_cx(&state->buffer.lines[filerow], match_x);
-                    if (rx >= (int)state->view.col_off && rx < (int)state->view.col_off + (state->view.screen_cols - gutter_width)) {
-                        hl2_byte = editorRowColToByte(rline, rlen, rx) - coff;
+                    if (rx >= (int)state->view.col_off && rx < (int)state->view.col_off + available_cols) {
+                        hl2_byte = editorRowColToByte(rline, rlen, (size_t)rx) - coff;
                     }
                 }
             }
 
             move(y, gutter_width);
-            for (int i = 0; i < draw_len; i++) {
-                if (i == hl1_byte || i == hl2_byte) attron(A_REVERSE);
-                addch(rline[coff + i]);
-                if (i == hl1_byte || i == hl2_byte) attroff(A_REVERSE);
+            for (size_t i = 0; i < draw_len; i++) {
+                if (i == hl1_byte || i == hl2_byte) {
+                    attron(COLOR_PAIR(2)); /* Terracotta for brackets */
+                    addch(rline[coff + i]);
+                    attroff(COLOR_PAIR(2));
+                } else {
+                    addch(rline[coff + i]);
+                }
             }
         }
     }

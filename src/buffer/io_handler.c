@@ -37,24 +37,43 @@ void editorSave(StitchState *state) {
         }
     }
 
-    size_t len;
+    size_t len = 0;
     char *buf = buffer_rows_to_string(&state->buffer, &len);
 
-    size_t tmp_len = strlen(state->buffer.filename) + 6;
-    char *tmp_filename = editorMalloc(tmp_len);
-    snprintf(tmp_filename, tmp_len, ".%s.tmp", state->buffer.filename);
+    /* Create temporary filename in the same directory as the target file */
+    char *filename = state->buffer.filename;
+    char *last_slash = strrchr(filename, '/');
+    char *tmp_filename;
+    if (last_slash) {
+        size_t dir_len = (size_t)(last_slash - filename) + 1;
+        size_t tmp_len = dir_len + strlen(last_slash + 1) + 8;
+        tmp_filename = editorMalloc(tmp_len);
+        memcpy(tmp_filename, filename, dir_len);
+        snprintf(tmp_filename + dir_len, tmp_len - dir_len, ".%s.tmp", last_slash + 1);
+    } else {
+        size_t tmp_len = strlen(filename) + 8;
+        tmp_filename = editorMalloc(tmp_len);
+        snprintf(tmp_filename, tmp_len, ".%s.tmp", filename);
+    }
 
     FILE *fp = fopen(tmp_filename, "w");
     if (fp != NULL) {
-        if (len == 0 || fwrite(buf, 1, len, fp) == len) {
-            if (fclose(fp) == 0) {
-                if (rename(tmp_filename, state->buffer.filename) == 0) {
+        bool write_ok = (len == 0);
+        if (len > 0) {
+            write_ok = (fwrite(buf, 1, len, fp) == len);
+        }
+        
+        if (write_ok) {
+            if (fflush(fp) == 0 && fsync(fileno(fp)) == 0 && fclose(fp) == 0) {
+                if (rename(tmp_filename, filename) == 0) {
                     free(buf);
                     free(tmp_filename);
                     state->buffer.dirty = 0;
                     ui_set_status_message(state, "%zu bytes written to disk", len);
                     return;
                 }
+            } else {
+                fclose(fp);
             }
         } else {
             fclose(fp);
@@ -66,7 +85,7 @@ void editorSave(StitchState *state) {
         free(tmp_filename);
     }
     free(buf);
-    ui_set_status_message(state, "Can't save! I/O error: %s", strerror(errno));
+    ui_set_status_message(state, "Save failed: %s", strerror(errno));
 }
 
 int editorOpen(StitchState *state, char *filename) {

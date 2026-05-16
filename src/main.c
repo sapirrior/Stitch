@@ -41,8 +41,12 @@ void init_app_state(StitchState *state) {
     state->core.shell_pid = -1;
 
     core_get_window_size(&state->view.screen_rows, &state->view.screen_cols);
-    if (state->view.screen_rows < 3) state->view.screen_rows = 3;
-    state->view.screen_rows -= 2;
+    if (state->view.screen_rows < 3) {
+        state->view.screen_rows = 1;
+    } else {
+        state->view.screen_rows -= 2;
+    }
+    if (state->view.screen_cols < 1) state->view.screen_cols = 1;
 }
 
 int main(int argc, char *argv[]) {

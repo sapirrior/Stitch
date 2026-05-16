@@ -45,17 +45,17 @@ int core_is_utf8_start(unsigned char c) {
 
 int editorIsUtf8Start(unsigned char c) { return core_is_utf8_start(c); }
 
-int editorRowByteToCol(const char *s, int len, int target_byte) {
-    int col = 0;
-    for (int i = 0; i < target_byte && i < len; i++) {
+size_t editorRowByteToCol(const char *s, size_t len, size_t target_byte) {
+    size_t col = 0;
+    for (size_t i = 0; i < target_byte && i < len; i++) {
         if (core_is_utf8_start((unsigned char)s[i])) col++;
     }
     return col;
 }
 
-int editorRowColToByte(const char *s, int len, int target_col) {
-    int byte = 0;
-    int col = 0;
+size_t editorRowColToByte(const char *s, size_t len, size_t target_col) {
+    size_t byte = 0;
+    size_t col = 0;
     while (byte < len && col < target_col) {
         if (core_is_utf8_start((unsigned char)s[byte])) col++;
         byte++;
