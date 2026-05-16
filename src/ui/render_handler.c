@@ -58,6 +58,8 @@ void ui_refresh_screen(StitchState *state) {
     ui_text_grid_draw(state);
     ui_status_bar_draw(state);
     ui_message_bar_draw(state);
+    
+    ui_help_overlay_draw(state);
 
     /* Position cursor */
     if (state->editor.mode == MODE_COMMAND) {

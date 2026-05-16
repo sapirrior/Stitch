@@ -93,6 +93,7 @@ typedef struct {
 typedef struct {
     char status_msg[80];
     bool show_line_numbers;
+    bool show_help_overlay;
 } StitchUI;
 
 typedef struct {

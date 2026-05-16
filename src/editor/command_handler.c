@@ -49,6 +49,8 @@ void editor_handle_command(StitchState *state, const char *cmd) {
     } else if (strcmp(cmd, "wq") == 0) {
         cmd_save_execute(state);
         exit(0);
+    } else if (strcmp(cmd, "h") == 0 || strcmp(cmd, "help") == 0) {
+        state->ui.show_help_overlay = true;
     } else if (strncmp(cmd, "e ", 2) == 0) {
         if (state->buffer.dirty) {
             ui_set_status_message(state, "No write since last change (add ! to override)");

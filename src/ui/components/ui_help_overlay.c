@@ -1,0 +1,72 @@
+#include <ncurses.h>
+#include <string.h>
+#include "stitch/types.h"
+#include "../ui_internal.h"
+
+static void help_print_line(int start_y, int start_x, int screen_rows, int line, const char *text, bool title) {
+    if (start_y + line >= screen_rows - 1) return;
+    move(start_y + line, start_x + 2);
+    if (title) {
+        attron(A_BOLD);
+        addstr(text);
+        attroff(A_BOLD);
+    } else {
+        addstr(text);
+    }
+}
+
+void ui_help_overlay_draw(StitchState *state) {
+    if (!state->ui.show_help_overlay) return;
+
+    int width = 42;
+    int height = 16;
+    
+    int start_y = (state->view.screen_rows - height) / 2;
+    if (start_y < 0) start_y = 0;
+    int start_x = (state->view.screen_cols - width) / 2;
+    if (start_x < 0) start_x = 0;
+
+    attron(COLOR_PAIR(4)); /* Standard Text */
+
+    /* Draw Box */
+    for (int y = 0; y < height; y++) {
+        if (start_y + y >= state->view.screen_rows) break;
+        move(start_y + y, start_x);
+        if (y == 0) {
+            addch(ACS_ULCORNER);
+            for (int x = 1; x < width - 1; x++) addch(ACS_HLINE);
+            addch(ACS_URCORNER);
+        } else if (y == height - 1) {
+            addch(ACS_LLCORNER);
+            for (int x = 1; x < width - 1; x++) addch(ACS_HLINE);
+            addch(ACS_LRCORNER);
+        } else {
+            addch(ACS_VLINE);
+            for (int x = 1; x < width - 1; x++) addch(' ');
+            addch(ACS_VLINE);
+        }
+    }
+
+    int rows = state->view.screen_rows;
+    help_print_line(start_y, start_x, rows, 1,  "Stitch Core Keybindings", true);
+    help_print_line(start_y, start_x, rows, 3,  "Modes:", true);
+    help_print_line(start_y, start_x, rows, 4,  "  i     - Insert Mode", false);
+    help_print_line(start_y, start_x, rows, 5,  "  Esc   - Normal Mode", false);
+    help_print_line(start_y, start_x, rows, 6,  "  :     - Command Mode", false);
+    help_print_line(start_y, start_x, rows, 8,  "Movement:", true);
+    help_print_line(start_y, start_x, rows, 9,  "  h/j/k/l - Left/Down/Up/Right", false);
+    help_print_line(start_y, start_x, rows, 10, "  gg/G    - Top/Bottom of file", false);
+    help_print_line(start_y, start_x, rows, 12, "Actions:", true);
+    help_print_line(start_y, start_x, rows, 13, "  u/U   - Undo/Redo", false);
+    help_print_line(start_y, start_x, rows, 14, "  /     - Search", false);
+
+    /* Draw dismiss instruction at the bottom */
+    const char *dismiss_msg = "[Press any key to close]";
+    int msg_len = (int)strlen(dismiss_msg);
+    if (msg_len < width - 2 && start_y + height - 1 < state->view.screen_rows) {
+        move(start_y + height - 1, start_x + (width - msg_len) / 2);
+        addstr(dismiss_msg);
+    }
+
+    attroff(COLOR_PAIR(4));
+}

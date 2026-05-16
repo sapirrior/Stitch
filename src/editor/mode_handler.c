@@ -9,6 +9,15 @@ void editor_process_keypress(StitchState *state) {
 
     if (c == STITCH_KEY_NONE) return;
 
+    if (state->ui.show_help_overlay) {
+        if (c == STITCH_KEY_RESIZE) {
+            ui_handle_resize(state);
+        } else {
+            state->ui.show_help_overlay = false;
+        }
+        return;
+    }
+
     if (c == STITCH_KEY_RESIZE) {
         ui_handle_resize(state);
         return;
