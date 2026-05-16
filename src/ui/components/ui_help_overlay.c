@@ -18,8 +18,14 @@ static void help_print_line(int start_y, int start_x, int screen_rows, int line,
 void ui_help_overlay_draw(StitchState *state) {
     if (!state->ui.show_help_overlay) return;
 
-    int width = 54;
-    int height = 24;
+    /* Dynamically adjust width and height based on terminal size */
+    int width = state->view.screen_cols - 8;
+    if (width > 64) width = 64; /* Cap width for readability */
+    if (width < 40) width = state->view.screen_cols;
+
+    int height = state->view.screen_rows - 4;
+    if (height > 30) height = 30; /* Cap height to a reasonable size */
+    if (height < 20) height = state->view.screen_rows;
     
     int start_y = (state->view.screen_rows - height) / 2;
     if (start_y < 0) start_y = 0;
@@ -48,28 +54,40 @@ void ui_help_overlay_draw(StitchState *state) {
     }
 
     int rows = state->view.screen_rows;
-    help_print_line(start_y, start_x, rows, 1,  "STITCH - THE GENTLE MODAL EDITOR", true);
+    int line = 1;
+
+    help_print_line(start_y, start_x, rows, line++, "STITCH - THE GENTLE MODAL EDITOR", true);
+    line++;
     
-    help_print_line(start_y, start_x, rows, 3,  "MODES", true);
-    help_print_line(start_y, start_x, rows, 4,  "  i / a / A - Insert / Append / End-Append", false);
-    help_print_line(start_y, start_x, rows, 5,  "  Esc       - Return to Normal Mode", false);
-    help_print_line(start_y, start_x, rows, 6,  "  :         - Enter Command Mode", false);
+    help_print_line(start_y, start_x, rows, line++, "MODES", true);
+    help_print_line(start_y, start_x, rows, line++, "  i / a / A - Insert / Append / End-Append", false);
+    help_print_line(start_y, start_x, rows, line++, "  v         - Visual Mode", false);
+    help_print_line(start_y, start_x, rows, line++, "  Esc       - Return to Normal Mode", false);
+    help_print_line(start_y, start_x, rows, line++, "  :         - Enter Command Mode", false);
+    line++;
 
-    help_print_line(start_y, start_x, rows, 8,  "MOVEMENT", true);
-    help_print_line(start_y, start_x, rows, 9,  "  h / j / k / l   - Left / Down / Up / Right", false);
-    help_print_line(start_y, start_x, rows, 10, "  0 / $           - Start / End of Line", false);
-    help_print_line(start_y, start_x, rows, 11, "  g / G / PgUp/Dn - Top / Bottom / Scroll", false);
+    help_print_line(start_y, start_x, rows, line++, "MOVEMENT", true);
+    help_print_line(start_y, start_x, rows, line++, "  h / j / k / l   - Left / Down / Up / Right", false);
+    help_print_line(start_y, start_x, rows, line++, "  0 / $           - Start / End of Line", false);
+    help_print_line(start_y, start_x, rows, line++, "  g / G / PgUp/Dn - Top / Bottom / Scroll", false);
+    line++;
 
-    help_print_line(start_y, start_x, rows, 13, "EDITING", true);
-    help_print_line(start_y, start_x, rows, 14, "  x / dd          - Delete Char / Line", false);
-    help_print_line(start_y, start_x, rows, 15, "  o / O           - New Line (Below / Above)", false);
-    help_print_line(start_y, start_x, rows, 16, "  u / U           - Undo / Redo", false);
-    help_print_line(start_y, start_x, rows, 17, "  /               - Search Text", false);
+    help_print_line(start_y, start_x, rows, line++, "EDITING", true);
+    help_print_line(start_y, start_x, rows, line++, "  x / dd          - Delete Char / Line", false);
+    help_print_line(start_y, start_x, rows, line++, "  o / O           - New Line (Below / Above)", false);
+    help_print_line(start_y, start_x, rows, line++, "  u / U           - Smart Undo / Redo", false);
+    help_print_line(start_y, start_x, rows, line++, "  /               - Search Text", false);
+    line++;
 
-    help_print_line(start_y, start_x, rows, 19, "COMMANDS", true);
-    help_print_line(start_y, start_x, rows, 20, "  :h / :help      - Show this help menu", false);
-    help_print_line(start_y, start_x, rows, 21, "  :nu / :nonu     - Line Numbers (On / Off)", false);
-    help_print_line(start_y, start_x, rows, 22, "  :w / :q / :wq   - Save / Quit / Save-Quit", false);
+    help_print_line(start_y, start_x, rows, line++, "VISUAL MODE", true);
+    help_print_line(start_y, start_x, rows, line++, "  d / x           - Delete Selection", false);
+    help_print_line(start_y, start_x, rows, line++, "  %               - Select Entire Buffer", false);
+    line++;
+
+    help_print_line(start_y, start_x, rows, line++, "COMMANDS", true);
+    help_print_line(start_y, start_x, rows, line++, "  :h / :help      - Show this help menu", false);
+    help_print_line(start_y, start_x, rows, line++, "  :nu / :nonu     - Line Numbers (On / Off)", false);
+    help_print_line(start_y, start_x, rows, line++, "  :w / :q / :wq   - Save / Quit / Save-Quit", false);
 
     /* Draw dismiss instruction at the bottom */
     const char *dismiss_msg = "[ Press Esc to close ]";
