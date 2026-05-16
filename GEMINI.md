@@ -34,6 +34,7 @@ Every specific behavior is isolated to its own file:
 - **Help Overlay**: Accessible via `:h` or `:help`. Displays a clean, structured guide to core keybindings, dismissed with `Esc`.
 - **Mouse Support**: Basic click-to-move support for intuitive cursor positioning within the text grid.
 - **Scroll Margins (Scrolloff)**: Horizontal (5 chars) and vertical (3 lines) margins ensure the cursor always stays within a visible context area, similar to Helix.
+- **Tab Key Support**: Inserts a tab character with a configurable stop (standardized to 4 spaces).
 - **Bracket Matching**: Real-time highlighting of matching `()`, `[]`, and `{}` pairs.
 - **Mode Switching**: The `escdelay` is minimized to 50ms to ensure instantaneous transitions between Insert and Normal modes.
 
