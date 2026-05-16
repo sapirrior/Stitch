@@ -7,3 +7,5 @@ build/
 # Editor temporary files
 *.swp
 .DS_Store
+*.tmp
+valgrind.log
